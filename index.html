@@ -7,7 +7,16 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="game-canvas"></canvas>
+      <main>
+        <canvas id="game-canvas" width="360" height="360"></canvas>
+        <p id="status" aria-live="polite">Ход: X</p>
+        <p id="hint" role="status"></p>
+        <div id="controls">
+          <button id="start-x" type="button">Начать за X</button>
+          <button id="start-o" type="button">Начать за O</button>
+          <button id="restart" type="button">Заново</button>
+        </div>
+      </main>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
