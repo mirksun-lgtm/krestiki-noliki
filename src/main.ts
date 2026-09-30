@@ -1,5 +1,6 @@
 import './style.css';
 import { createGame, makeMove, type GameState, type Player } from './game/gameCore';
+import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
 
 function must<T>(value: T | null | undefined, message: string): T {
   if (value == null) throw new Error(message);
@@ -27,8 +28,6 @@ const restartBtn = must(
   'Кнопка #restart не найдена',
 );
 
-const CELL = canvas.width / 3;
-
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   finished: 'Партия уже окончена — начните новую',
   outOfRange: 'Ход вне поля',
@@ -37,72 +36,63 @@ const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
 
 let firstPlayer: Player = 'X';
 let state: GameState;
+let hoverCell: number | null = null;
+/** Сторона поля в CSS-пикселях, обновляется при resize. */
+let boardSize = 360;
 
 function draw(): void {
-  ctx.fillStyle = '#f2ebe0';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawBoard(ctx, state, { size: boardSize, hoverCell });
+}
 
-  ctx.strokeStyle = '#8a7f6d';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  for (let i = 1; i < 3; i++) {
-    ctx.moveTo(i * CELL, 0);
-    ctx.lineTo(i * CELL, canvas.height);
-    ctx.moveTo(0, i * CELL);
-    ctx.lineTo(canvas.width, i * CELL);
-  }
-  ctx.stroke();
+/** Синхронизация внутреннего размера canvas с CSS-размером и devicePixelRatio. */
+function syncCanvasSize(): void {
+  // bitmap canvas соответствует content-box, а не border-box
+  const cssSize = canvas.clientWidth;
+  if (cssSize <= 0) return;
+  boardSize = cssSize;
 
-  ctx.strokeStyle = '#4a4235';
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
-  for (let index = 0; index < 9; index++) {
-    const mark = state.board[index];
-    if (!mark) continue;
-    const cx = (index % 3) * CELL + CELL / 2;
-    const cy = Math.floor(index / 3) * CELL + CELL / 2;
-    const half = CELL * 0.22;
-    ctx.beginPath();
-    if (mark === 'X') {
-      ctx.moveTo(cx - half, cy - half);
-      ctx.lineTo(cx + half, cy + half);
-      ctx.moveTo(cx + half, cy - half);
-      ctx.lineTo(cx - half, cy + half);
-    } else {
-      ctx.arc(cx, cy, half, 0, Math.PI * 2);
-    }
-    ctx.stroke();
+  const dpr = window.devicePixelRatio || 1;
+  const px = Math.max(1, Math.round(boardSize * dpr));
+  if (canvas.width !== px || canvas.height !== px) {
+    canvas.width = px;
+    canvas.height = px;
   }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
 }
 
 function updateStatus(): void {
   if (state.status === 'playing') {
     statusEl.textContent = `Ход: ${state.currentPlayer}`;
+    statusEl.dataset.player = state.currentPlayer;
   } else if (state.status === 'win') {
     statusEl.textContent = `Победа: ${state.winner}!`;
+    statusEl.dataset.player = state.winner ?? '';
   } else {
     statusEl.textContent = 'Ничья';
+    statusEl.dataset.player = '';
   }
 }
 
 function newGame(player: Player): void {
   firstPlayer = player;
   state = createGame(player);
+  hoverCell = null;
   hintEl.textContent = '';
-  draw();
   updateStatus();
+  draw();
 }
 
-function cellFromPointer(e: PointerEvent): number | null {
+function cellFromEvent(e: PointerEvent): number | null {
   const rect = canvas.getBoundingClientRect();
-  const col = Math.floor((e.clientX - rect.left) / (rect.width / 3));
-  const row = Math.floor((e.clientY - rect.top) / (rect.height / 3));
-  if (col < 0 || col > 2 || row < 0 || row > 2) return null;
-  return row * 3 + col;
+  const x = e.clientX - rect.left - canvas.clientLeft;
+  const y = e.clientY - rect.top - canvas.clientTop;
+  return cellAtPoint(x, y, canvas.clientWidth);
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  const cell = cellFromPointer(e);
+  e.preventDefault();
+  const cell = cellFromEvent(e);
   if (cell === null) return;
 
   const result = makeMove(state, cell);
@@ -113,12 +103,31 @@ canvas.addEventListener('pointerdown', (e) => {
 
   hintEl.textContent = '';
   state = result.state;
-  draw();
   updateStatus();
+  draw();
 });
+
+// Подсветка клетки — только для мыши: на тач-устройствах hover не имеет смысла.
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const next = cellFromEvent(e);
+  if (next === hoverCell) return;
+  hoverCell = next;
+  draw();
+});
+
+canvas.addEventListener('pointerleave', () => {
+  if (hoverCell === null) return;
+  hoverCell = null;
+  draw();
+});
+
+window.addEventListener('resize', syncCanvasSize);
 
 startXBtn.addEventListener('click', () => newGame('X'));
 startOBtn.addEventListener('click', () => newGame('O'));
 restartBtn.addEventListener('click', () => newGame(firstPlayer));
 
-newGame('X');
+state = createGame('X');
+updateStatus();
+syncCanvasSize();
