@@ -121,7 +121,6 @@ let lastTickAt = 0;
 let lastShownSecs = -1;
 let endedByTimeout = false;
 
-/** Музыкальный контроллер. */
 const music = createMusic();
 
 /** Анимация появления знака и победной линии: время старта, крутится в rAF. */
@@ -644,14 +643,6 @@ canvas.addEventListener('keydown', (e) => {
         }
       }
       return;
-    case 'Escape':
-      // ESC закрывает плашку результата или оверлей достижений
-      if (!resultOverlay.hidden) {
-        resultMenuBtn.click();
-      } else if (!achievementOverlay.hidden) {
-        achievementCloseBtn.click();
-      }
-      return;
   }
 
   if (nextCell !== keyboardCell) {
@@ -661,7 +652,6 @@ canvas.addEventListener('keydown', (e) => {
   }
 });
 
-// Синхронизируем keyboardCell при потере фокуса
 canvas.addEventListener('blur', () => {
   keyboardCell = null;
   if (hoverCell !== null) {

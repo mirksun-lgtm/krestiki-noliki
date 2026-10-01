@@ -53,8 +53,7 @@ function pick<T>(value: unknown, allowed: readonly T[], fallback: T): T {
 
 /** Своевольное значение каждого поля: невалидное или отсутствующее → дефолт поля. */
 function normalizeSettings(raw: unknown): UserSettings {
-  const source: Record<string, unknown> =
-    typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const source = asObject(raw);
   return {
     side: pick(source.side, SIDES, DEFAULT_SETTINGS.side),
     difficulty: pick(source.difficulty, DIFFICULTIES, DEFAULT_SETTINGS.difficulty),

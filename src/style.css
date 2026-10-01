@@ -42,17 +42,6 @@ body {
   border: 0;
 }
 
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-}
-
-body {
-  background: radial-gradient(ellipse at 50% 35%, var(--bg-glow) 0%, var(--bg) 75%);
-  overscroll-behavior: none;
-}
-
 #app {
   min-height: 100vh;
   display: flex;
@@ -313,7 +302,7 @@ button {
   touch-action: manipulation;
 }
 
-button:active:not(:disabled) {
+button:active {
   background: #ece2cc;
   box-shadow: 0 1px 0 #cbb894;
   transform: translateY(1px);
@@ -322,11 +311,6 @@ button:active:not(:disabled) {
 button:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
-}
-
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 #menu-pvp,
