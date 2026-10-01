@@ -1,3 +1,19 @@
+/* Палитра cozy-fantasy темы (тёплые мягкие цвета, GDD §14) */
+:root {
+  --bg: #ece2cf; /* пергамент */
+  --bg-glow: #f8f1e1; /* мягкое свечение по центру */
+  --text: #4a3f2e; /* тёмно-коричневый */
+  --text-soft: #6f6450; /* приглушённый */
+  --panel: #faf5e7; /* карточки */
+  --panel-2: #f3ebd8; /* пилюли, строки списков */
+  --line: #c8b693; /* мягкие рамки */
+  --line-strong: #a5885e; /* рамки кнопок и карточек */
+  --accent: #b8622e; /* терракота (O) */
+  --accent-2: #3f6590; /* сине-стальной (X) */
+  --wood: #9c7243; /* деревянная рамка поля */
+  --overlay: rgba(58, 47, 33, 0.5); /* затемнение под плашками */
+}
+
 html,
 body {
   margin: 0;
@@ -5,7 +21,7 @@ body {
 }
 
 body {
-  background: #e8e0d3;
+  background: radial-gradient(ellipse at 50% 35%, var(--bg-glow) 0%, var(--bg) 75%);
   overscroll-behavior: none;
 }
 
@@ -32,22 +48,30 @@ body {
 h1,
 h2 {
   margin: 0;
-  font: 700 24px/1.2 system-ui, sans-serif;
-  color: #3f382c;
+  font: 700 25px/1.2 Georgia, 'Times New Roman', serif;
+  color: var(--text);
+}
+
+/* Декоративный разделитель под заголовком меню */
+.title-ornament {
+  display: block;
+  width: 168px;
+  height: 14px;
+  margin-top: -10px;
 }
 
 fieldset {
   width: min(320px, calc(100vw - 32px));
   margin: 0;
   padding: 8px 12px 12px;
-  border: 1px solid #c9beae;
+  border: 1px solid var(--line);
   border-radius: 8px;
 }
 
 legend {
   padding: 0 6px;
   font: 700 14px/1.2 system-ui, sans-serif;
-  color: #6b614f;
+  color: var(--text-soft);
 }
 
 fieldset[hidden] {
@@ -60,14 +84,14 @@ fieldset label {
   gap: 8px;
   min-height: 44px;
   font: 600 16px/1.2 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
   cursor: pointer;
 }
 
 fieldset input[type='radio'] {
   width: 20px;
   height: 20px;
-  accent-color: #4a4235;
+  accent-color: var(--accent);
 }
 
 .row {
@@ -81,8 +105,9 @@ fieldset input[type='radio'] {
   display: block;
   width: min(360px, calc(100vw - 32px), calc(100vh - 300px));
   height: auto;
-  background: #f2ebe0;
-  border: 1px solid #c9beae;
+  background: #c9a675;
+  border: 2px solid var(--wood);
+  border-radius: 6px;
   touch-action: none;
   user-select: none;
 }
@@ -99,7 +124,7 @@ fieldset input[type='radio'] {
   justify-content: center;
   padding: 12px;
   box-sizing: border-box;
-  background: rgba(63, 56, 44, 0.45);
+  background: var(--overlay);
 }
 
 #result-overlay[hidden] {
@@ -114,10 +139,10 @@ fieldset input[type='radio'] {
   gap: 12px;
   padding: 16px;
   box-sizing: border-box;
-  background: #f2ebe0;
-  border: 1px solid #8a7f6d;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(63, 56, 44, 0.35);
+  box-shadow: 0 4px 16px rgba(58, 47, 33, 0.35);
 }
 
 #side {
@@ -130,7 +155,7 @@ fieldset input[type='radio'] {
 #series-info {
   margin: 0;
   font: 700 15px/1.2 system-ui, sans-serif;
-  color: #6b614f;
+  color: var(--text-soft);
 }
 
 #turn-row {
@@ -144,7 +169,7 @@ fieldset input[type='radio'] {
 #status {
   margin: 0;
   font: 700 20px/1.2 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
 }
 
 #turn-timer {
@@ -155,9 +180,9 @@ fieldset input[type='radio'] {
   text-align: center;
   font: 700 22px/1.2 system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: #4a4235;
-  background: #e7ddcb;
-  border: 1px solid #c9beae;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: 999px;
   transition: color 0.2s ease, background-color 0.2s ease;
 }
@@ -174,11 +199,11 @@ fieldset input[type='radio'] {
 }
 
 #status[data-player='X'] {
-  color: #2f5d8a;
+  color: var(--accent-2);
 }
 
 #status[data-player='O'] {
-  color: #a85c2a;
+  color: var(--accent);
 }
 
 #hint {
@@ -198,14 +223,14 @@ fieldset input[type='radio'] {
 #result-title {
   margin: 0;
   font: 700 26px/1.2 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
   text-align: center;
 }
 
 #result-sub {
   margin: 0;
   font: 600 17px/1.3 system-ui, sans-serif;
-  color: #6b614f;
+  color: var(--text-soft);
   text-align: center;
 }
 
@@ -213,20 +238,23 @@ button {
   min-height: 44px;
   padding: 10px 16px;
   font: 600 16px/1 system-ui, sans-serif;
-  color: #3f382c;
-  background: #f2ebe0;
-  border: 1px solid #8a7f6d;
-  border-radius: 8px;
+  color: var(--text);
+  background: linear-gradient(#fdfaf0, var(--panel-2));
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 2px 0 #cbb894, 0 1px 3px rgba(74, 60, 40, 0.25);
   cursor: pointer;
   touch-action: manipulation;
 }
 
 button:active:not(:disabled) {
-  background: #e0d6c5;
+  background: #ece2cc;
+  box-shadow: 0 1px 0 #cbb894;
+  transform: translateY(1px);
 }
 
 button:focus-visible {
-  outline: 2px solid #4a4235;
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
@@ -252,7 +280,7 @@ button:disabled {
   justify-content: center;
   padding: 16px;
   box-sizing: border-box;
-  background: rgba(63, 56, 44, 0.55);
+  background: var(--overlay);
 }
 
 #achievement-overlay[hidden] {
@@ -270,7 +298,7 @@ button:disabled {
   background: #fdf6e6;
   border: 2px solid #d4a94e;
   border-radius: 16px;
-  box-shadow: 0 6px 24px rgba(63, 56, 44, 0.45), 0 0 32px rgba(212, 169, 78, 0.55);
+  box-shadow: 0 6px 24px rgba(58, 47, 33, 0.45), 0 0 32px rgba(212, 169, 78, 0.55);
   animation: achievement-pop 0.45s ease-out;
 }
 
@@ -304,14 +332,14 @@ button:disabled {
 #achievement-title {
   margin: 0;
   font: 700 22px/1.2 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
   text-align: center;
 }
 
 #achievement-desc {
   margin: 0;
   font: 600 15px/1.35 system-ui, sans-serif;
-  color: #6b614f;
+  color: var(--text-soft);
   text-align: center;
 }
 
@@ -348,8 +376,8 @@ button:disabled {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: #f2ebe0;
-  border: 1px solid #c9beae;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: 10px;
 }
 
@@ -366,13 +394,13 @@ button:disabled {
 .achv-text {
   flex: 1;
   font: 700 15px/1.3 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
 }
 
 .achv-text span {
   font-weight: 500;
   font-size: 13px;
-  color: #6b614f;
+  color: var(--text-soft);
 }
 
 .achv-score {
@@ -392,31 +420,31 @@ button:disabled {
   margin: 0;
   text-align: center;
   font: 600 16px/1.3 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
 }
 
 #stats-body h3 {
   margin: 4px 0 0;
   font: 700 16px/1.2 system-ui, sans-serif;
-  color: #6b614f;
+  color: var(--text-soft);
 }
 
 .stat-table {
   border-collapse: collapse;
   font: 600 14px/1.2 system-ui, sans-serif;
-  color: #3f382c;
+  color: var(--text);
 }
 
 .stat-table th,
 .stat-table td {
   padding: 6px 10px;
-  border-bottom: 1px solid #c9beae;
+  border-bottom: 1px solid var(--line);
   text-align: center;
 }
 
 .stat-table thead th {
   font-size: 13px;
-  color: #6b614f;
+  color: var(--text-soft);
 }
 
 /* Низкий landscape (телефон): поле слева, панель справа */

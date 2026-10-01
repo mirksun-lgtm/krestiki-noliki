@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { cellAtPoint, cellCenter, winningLinePoints } from './boardRenderer';
+import {
+  cellAtPoint,
+  cellCenter,
+  markStrokes,
+  winningLinePoints,
+  type MarkStroke,
+} from './boardRenderer';
 
 // Поле 360×360 → клетка 120×120
 const SIZE = 360;
@@ -66,5 +72,80 @@ describe('winningLinePoints', () => {
 
   it('диагональ [2,4,6] — от центра 2 до центра 6', () => {
     expect(winningLinePoints([2, 4, 6], SIZE)).toEqual({ x1: 300, y1: 60, x2: 60, y2: 300 });
+  });
+});
+
+type Curve = Extract<MarkStroke, { kind: 'quadratic' }>;
+type Arc = Extract<MarkStroke, { kind: 'arc' }>;
+
+function curves(strokes: MarkStroke[]): Curve[] {
+  return strokes.filter((s): s is Curve => s.kind === 'quadratic');
+}
+
+function arcs(strokes: MarkStroke[]): Arc[] {
+  return strokes.filter((s): s is Arc => s.kind === 'arc');
+}
+
+describe('markStrokes', () => {
+  it('X — два изогнутых штриха, концы которых симметричны вокруг центра', () => {
+    const strokes = curves(markStrokes('X', 180, 180, SIZE));
+    expect(strokes).toHaveLength(2);
+    for (const c of strokes) {
+      expect((c.x1 + c.x2) / 2).toBeCloseTo(180);
+      expect((c.y1 + c.y2) / 2).toBeCloseTo(180);
+      expect(c.x1).not.toBe(c.x2);
+      expect(c.y1).not.toBe(c.y2);
+    }
+  });
+
+  it('X — штрихи идут по диагоналям: ↘ и ↙', () => {
+    const [a, b] = curves(markStrokes('X', 180, 180, SIZE));
+    expect(a.x1).toBeLessThan(a.x2);
+    expect(a.y1).toBeLessThan(a.y2);
+    expect(b.x1).toBeGreaterThan(b.x2);
+    expect(b.y1).toBeLessThan(b.y2);
+  });
+
+  it('X — штрих изогнут: точка управления не лежит на прямой концов', () => {
+    for (const c of curves(markStrokes('X', 180, 180, SIZE))) {
+      // расстояние точки управления от прямой через (x1,y1)-(x2,y2)
+      const dx = c.x2 - c.x1;
+      const dy = c.y2 - c.y1;
+      const dist = Math.abs(dy * (c.cx - c.x1) - dx * (c.cy - c.y1)) / Math.hypot(dx, dy);
+      expect(dist).toBeGreaterThan(0);
+    }
+  });
+
+  it('O — одно полное кольцо в центре', () => {
+    const [arc, ...rest] = arcs(markStrokes('O', 180, 180, SIZE));
+    expect(rest).toHaveLength(0);
+    expect(arc.cx).toBeCloseTo(180);
+    expect(arc.cy).toBeCloseTo(180);
+    expect(arc.r).toBeGreaterThan(0);
+    expect(arc.to - arc.from).toBeCloseTo(Math.PI * 2);
+  });
+
+  it('знак не вылезает за пределы своей клетки (не касается линий сетки)', () => {
+    // клетка = size/3, знак живёт в центре клетки (180,180)
+    const halfCell = CELL / 2;
+    for (const c of curves(markStrokes('X', 180, 180, SIZE))) {
+      const reach = Math.max(
+        Math.hypot(c.x1 - 180, c.y1 - 180),
+        Math.hypot(c.x2 - 180, c.y2 - 180),
+      );
+      expect(reach).toBeLessThan(halfCell);
+    }
+    const [arc] = arcs(markStrokes('O', 180, 180, SIZE));
+    expect(arc.r).toBeLessThan(halfCell);
+  });
+
+  it('удвоение поля удваивает размер знака', () => {
+    const [small] = arcs(markStrokes('O', 100, 100, 150));
+    const [big] = arcs(markStrokes('O', 100, 100, 300));
+    expect(big.r).toBeCloseTo(small.r * 2);
+    const smallX = curves(markStrokes('X', 100, 100, 150));
+    const bigX = curves(markStrokes('X', 100, 100, 300));
+    const reach = (c: Curve) => Math.hypot(c.x1 - 100, c.y1 - 100);
+    expect(reach(bigX[0])).toBeCloseTo(reach(smallX[0]) * 2);
   });
 });
