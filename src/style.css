@@ -563,10 +563,6 @@ button:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .markAnim,
-  .winAnim {
-    animation: none !important;
-  }
 }
 
 /* Увеличенные touch-targets для очень маленьких экранов */

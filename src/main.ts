@@ -81,6 +81,7 @@ const achievementCloseBtn = element<HTMLButtonElement>('achievement-close');
 
 const canvas = element<HTMLCanvasElement>('game-canvas');
 const ctx = must(canvas.getContext('2d'), '2D-контекст недоступен');
+const gameScreenEl = element<HTMLElement>('screen-game');
 
 /** Фокусируемая клетка для клавиатурной навигации (0-8 или null) */
 let keyboardCell: number | null = null;
@@ -183,6 +184,9 @@ function showNextAchievement(): void {
   const next = achievementQueue.shift();
   if (next == null) {
     achievementOverlay.hidden = true;
+    // GDD §10.2: отсчёт возобновляется только после закрытия последней карточки наград
+    // и только если игрок всё ещё в игре (иначе — фантомный отсчёт после ухода в меню)
+    if (state.status === 'playing' && !gameScreenEl.hidden) ensureTimerLoop();
     return;
   }
   achievementOverlay.hidden = true;
@@ -192,6 +196,8 @@ function showNextAchievement(): void {
   achievementGainEl.textContent = `+${next.score} очков · всего ${achievementScore(unlocked)}`;
   void achievementOverlay.offsetWidth;
   achievementOverlay.hidden = false;
+  // GDD §10.2: пока показана карточка награда, отсчёт таймера не идёт
+  stopTimerLoop();
   playSfx('achievement');
   // Фокус на кнопку закрытия для клавиатурной навигации
   achievementCloseBtn.focus();
