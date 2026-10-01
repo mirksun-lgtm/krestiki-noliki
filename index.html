@@ -33,33 +33,38 @@
 
       <section id="screen-setup" class="screen" hidden>
         <h2>Новая партия</h2>
-        <fieldset id="ai-difficulty" hidden>
+        <fieldset id="ai-difficulty" hidden aria-describedby="ai-difficulty-desc">
           <legend>Сложность AI</legend>
+          <p id="ai-difficulty-desc" class="sr-only">Выберите уровень сложности компьютерного соперника</p>
           <label><input type="radio" name="difficulty" value="easy" /> Easy</label>
           <label><input type="radio" name="difficulty" value="medium" checked /> Medium</label>
           <label><input type="radio" name="difficulty" value="hard" /> Hard</label>
           <label><input type="radio" name="difficulty" value="impossible" /> Impossible</label>
         </fieldset>
-        <fieldset id="pve-side" hidden>
+        <fieldset id="pve-side" hidden aria-describedby="pve-side-desc">
           <legend>Вы играете за</legend>
+          <p id="pve-side-desc" class="sr-only">Выберите, за какую сторону будете играть</p>
           <label><input type="radio" name="side" value="X" checked /> X</label>
           <label><input type="radio" name="side" value="O" /> O</label>
         </fieldset>
-        <fieldset>
+        <fieldset aria-describedby="timer-desc">
           <legend>Таймер на ход</legend>
+          <p id="timer-desc" class="sr-only">Выберите лимит времени на ход</p>
           <label><input type="radio" name="timer" value="0" checked /> Без таймера</label>
           <label><input type="radio" name="timer" value="5" /> 5 секунд</label>
           <label><input type="radio" name="timer" value="10" /> 10 секунд</label>
           <label><input type="radio" name="timer" value="30" /> 30 секунд</label>
         </fieldset>
-        <fieldset>
+        <fieldset aria-describedby="format-desc">
           <legend>Формат</legend>
+          <p id="format-desc" class="sr-only">Выберите формат серии партий</p>
           <label><input type="radio" name="format" value="single" checked /> Одна партия</label>
           <label><input type="radio" name="format" value="bestOf3" /> Best of 3</label>
           <label><input type="radio" name="format" value="bestOf5" /> Best of 5</label>
         </fieldset>
-        <fieldset>
+        <fieldset aria-describedby="starter-desc">
           <legend>Кто начинает</legend>
+          <p id="starter-desc" class="sr-only">Выберите, кто ходит первым</p>
           <label><input type="radio" name="starter" value="X" checked /> X</label>
           <label><input type="radio" name="starter" value="O" /> O</label>
         </fieldset>
@@ -94,8 +99,8 @@
       <section id="screen-game" class="screen" hidden>
         <p id="series-info" hidden></p>
         <div id="board-wrap">
-          <canvas id="game-canvas" width="360" height="360"></canvas>
-          <div id="result-overlay" hidden>
+          <canvas id="game-canvas" width="360" height="360" role="img" aria-label="Игровое поле 3 на 3 клетки" tabindex="0"></canvas>
+          <div id="result-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="result-title" aria-describedby="result-sub">
             <div class="result-card">
               <p id="result-title"></p>
               <p id="result-sub" hidden></p>
@@ -108,10 +113,10 @@
         </div>
         <div id="side">
           <div id="turn-row">
-            <p id="status" aria-live="polite">Ход: X</p>
-            <p id="turn-timer" hidden></p>
+            <p id="status" aria-live="polite" aria-atomic="true">Ход: X</p>
+            <p id="turn-timer" hidden aria-live="polite" aria-atomic="true"></p>
           </div>
-          <p id="hint" role="status"></p>
+          <p id="hint" role="status" aria-live="polite" aria-atomic="true"></p>
           <div id="controls">
             <button id="restart" type="button">Заново</button>
             <button id="to-menu" type="button">В меню</button>
@@ -119,13 +124,13 @@
         </div>
       </section>
     </div>
-    <div id="achievement-overlay" role="dialog" aria-modal="true" hidden>
+    <div id="achievement-overlay" role="dialog" aria-modal="true" aria-labelledby="achievement-title" aria-describedby="achievement-desc" hidden>
       <div class="achievement-card">
         <p class="achievement-kicker">Достижение получено!</p>
         <span id="achievement-icon" aria-hidden="true"></span>
         <p id="achievement-title"></p>
         <p id="achievement-desc"></p>
-        <p id="achievement-gain"></p>
+        <p id="achievement-gain" aria-live="polite"></p>
         <button id="achievement-close" type="button">Классно!</button>
       </div>
     </div>

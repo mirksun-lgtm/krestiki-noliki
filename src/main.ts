@@ -82,6 +82,9 @@ const achievementCloseBtn = element<HTMLButtonElement>('achievement-close');
 const canvas = element<HTMLCanvasElement>('game-canvas');
 const ctx = must(canvas.getContext('2d'), '2D-контекст недоступен');
 
+/** Фокусируемая клетка для клавиатурной навигации (0-8 или null) */
+let keyboardCell: number | null = null;
+
 type ScreenId =
   | 'screen-menu'
   | 'screen-setup'
@@ -190,6 +193,8 @@ function showNextAchievement(): void {
   void achievementOverlay.offsetWidth;
   achievementOverlay.hidden = false;
   playSfx('achievement');
+  // Фокус на кнопку закрытия для клавиатурной навигации
+  achievementCloseBtn.focus();
 }
 
 achievementCloseBtn.addEventListener('click', showNextAchievement);
@@ -423,6 +428,8 @@ function showResult(): void {
   // счёт над полем обновляем после записи результата: с плашкой поле остаётся видно
   updateSeriesInfo();
   resultOverlay.hidden = false;
+  // Фокус на первый интерактивный элемент плашки для клавиатурной навигации
+  resultNextBtn.focus();
 }
 
 function finishGameIfNeeded(): void {
@@ -572,6 +579,99 @@ canvas.addEventListener('pointerleave', () => {
   if (hoverCell === null) return;
   hoverCell = null;
   draw();
+});
+
+/** Клавиатурная навигация по клеткам (Tab фокусирует canvas, стрелки перемещают, Enter/Space ставит фигуру) */
+canvas.addEventListener('keydown', (e) => {
+  if (state.status !== 'playing' || isAiTurn()) return;
+
+  let nextCell = keyboardCell;
+
+  switch (e.key) {
+    case 'ArrowUp':
+      e.preventDefault();
+      if (nextCell === null) nextCell = 6; // начинаем с нижнего ряда
+      else if (nextCell >= 3) nextCell -= 3;
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      if (nextCell === null) nextCell = 2; // начинаем с верхнего ряда
+      else if (nextCell <= 5) nextCell += 3;
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      if (nextCell === null) nextCell = 2; // начинаем с правого столбца
+      else if (nextCell % 3 !== 0) nextCell -= 1;
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      if (nextCell === null) nextCell = 0; // начинаем с левого столбца
+      else if (nextCell % 3 !== 2) nextCell += 1;
+      break;
+    case 'Home':
+      e.preventDefault();
+      nextCell = 0;
+      break;
+    case 'End':
+      e.preventDefault();
+      nextCell = 8;
+      break;
+    case 'Enter':
+    case ' ':
+      e.preventDefault();
+      if (nextCell !== null && !isAiTurn() && state.status === 'playing') {
+        const result = makeMove(state, nextCell);
+        if (result.ok) {
+          hintEl.textContent = '';
+          state = result.state;
+          updateStatus();
+          beginMarkAnim(nextCell);
+          draw();
+          const playingAfterMove = state.status === 'playing';
+          finishGameIfNeeded();
+          if (playingAfterMove) playSfx('move');
+          syncTimerWithTurn();
+          if (isAiTurn()) scheduleAiMove();
+        } else {
+          hintEl.textContent = HINTS[result.reason];
+          playSfx('error');
+        }
+      }
+      return;
+    case 'Escape':
+      // ESC закрывает плашку результата или оверлей достижений
+      if (!resultOverlay.hidden) {
+        resultMenuBtn.click();
+      } else if (!achievementOverlay.hidden) {
+        achievementCloseBtn.click();
+      }
+      return;
+  }
+
+  if (nextCell !== keyboardCell) {
+    keyboardCell = nextCell;
+    hoverCell = nextCell; // переиспользуем hover для визуальной подсветки
+    draw();
+  }
+});
+
+// Синхронизируем keyboardCell при потере фокуса
+canvas.addEventListener('blur', () => {
+  keyboardCell = null;
+  if (hoverCell !== null) {
+    hoverCell = null;
+    draw();
+  }
+});
+
+/** Глобальный ESC — закрывает открытые оверлеи (результат, достижения) из любой точки */
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!resultOverlay.hidden) {
+    resultMenuBtn.click();
+  } else if (!achievementOverlay.hidden) {
+    achievementCloseBtn.click();
+  }
 });
 
 window.addEventListener('resize', syncCanvasSize);

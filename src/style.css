@@ -12,6 +12,34 @@
   --accent-2: #3f6590; /* сине-стальной (X) */
   --wood: #9c7243; /* деревянная рамка поля */
   --overlay: rgba(58, 47, 33, 0.5); /* затемнение под плашками */
+  --focus-ring: var(--text); /* цвет фокуса */
+  --urgent-text: #9c2f14; /* красный для таймера */
+  --urgent-bg: #f6dcd0;
+  --urgent-border: #c98a70;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 35%, var(--bg-glow) 0%, var(--bg) 75%);
+  overscroll-behavior: none;
+}
+
+/* Скрытый для зрения, но доступный для скринридеров */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 html,
@@ -113,6 +141,11 @@ fieldset input[type='checkbox'] {
   user-select: none;
 }
 
+#game-canvas:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 #board-wrap {
   position: relative;
 }
@@ -201,7 +234,7 @@ fieldset input[type='checkbox'] {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 999px;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 #turn-timer[hidden] {
@@ -210,9 +243,9 @@ fieldset input[type='checkbox'] {
 
 /* Последние секунды: заметнее, но без мельтешения */
 #turn-timer.urgent {
-  color: #9c2f14;
-  background: #f6dcd0;
-  border-color: #c98a70;
+  color: var(--urgent-text);
+  background: var(--urgent-bg);
+  border-color: var(--urgent-border);
 }
 
 #status[data-player='X'] {
@@ -489,5 +522,60 @@ button:disabled {
 
   #game-canvas {
     width: min(calc(100vh - 32px), calc(100vw - 260px));
+  }
+}
+
+/* High contrast mode — усиливаем границы и контрасты */
+@media (prefers-contrast: high) {
+  :root {
+    --line: #000;
+    --line-strong: #000;
+    --text: #000;
+    --text-soft: #333;
+    --accent: #000;
+    --accent-2: #000;
+    --wood: #000;
+    --urgent-text: #000;
+    --urgent-bg: #fff;
+    --urgent-border: #000;
+  }
+  #game-canvas {
+    border-width: 3px;
+  }
+  button {
+    border-width: 2px;
+  }
+  .result-card,
+  .achievement-card {
+    border-width: 2px;
+  }
+  fieldset {
+    border-width: 2px;
+  }
+}
+
+/* Respect reduced motion — отключаем анимации */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .markAnim,
+  .winAnim {
+    animation: none !important;
+  }
+}
+
+/* Увеличенные touch-targets для очень маленьких экранов */
+@media (max-width: 320px) {
+  button {
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+  fieldset label {
+    min-height: 48px;
   }
 }
