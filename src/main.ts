@@ -1,6 +1,14 @@
 import './style.css';
-import { createGame, makeMove, type GameState, type Player } from './game/gameCore';
+import { createGame, makeMove, timeoutGame, type GameState, type Player } from './game/gameCore';
 import { createSeries, recordGameResult, targetWins, type SeriesFormat, type SeriesState } from './game/series';
+import {
+  advanceTimer,
+  createTurnTimer,
+  restartTimer,
+  stopTimer,
+  type TimerPreset,
+  type TurnTimer,
+} from './game/turnTimer';
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
 import { chooseMove, type Difficulty } from './ai/ai';
 
@@ -24,6 +32,7 @@ const setupBackBtn = element<HTMLButtonElement>('setup-back');
 const setupStartBtn = element<HTMLButtonElement>('setup-start');
 const seriesInfoEl = element<HTMLElement>('series-info');
 const statusEl = element<HTMLElement>('status');
+const timerEl = element<HTMLElement>('turn-timer');
 const hintEl = element<HTMLElement>('hint');
 const restartBtn = element<HTMLButtonElement>('restart');
 const toMenuBtn = element<HTMLButtonElement>('to-menu');
@@ -51,18 +60,25 @@ let params: {
   difficulty: Difficulty;
   format: SeriesFormat;
   starter: Player;
+  timer: TimerPreset;
 } = {
   mode: 'pvp',
   side: 'X',
   difficulty: 'medium',
   format: 'single',
   starter: 'X',
+  timer: 0,
 };
 let series: SeriesState = createSeries('single', 'X');
 let state: GameState = createGame('X');
 let hoverCell: number | null = null;
 /** Сторона поля в CSS-пикселях, обновляется при resize. */
 let boardSize = 360;
+
+let timer: TurnTimer = createTurnTimer(0);
+let timerLoop: number | null = null;
+let lastTickAt = 0;
+let endedByTimeout = false;
 
 function aiSide(): Player {
   return params.side === 'X' ? 'O' : 'X';
@@ -88,12 +104,66 @@ function aiMove(): void {
   updateStatus();
   draw();
   finishGameIfNeeded();
+  syncTimerWithTurn();
 }
 
 function showScreen(id: ScreenId): void {
+  stopTimerLoop();
   for (const screen of screens) screen.hidden = screen.id !== id;
   resultOverlay.hidden = true;
   if (id === 'screen-game') syncCanvasSize();
+}
+
+function turnTimerTick(): void {
+  const now = Date.now();
+  const result = advanceTimer(timer, now - lastTickAt);
+  lastTickAt = now;
+  timer = result.timer;
+  renderTurnTimer();
+  if (result.timedOut) onTimerTimeout();
+}
+
+/** Запускает интервал отсчёта (идемпотентно); при «без таймера» — не запускает. */
+function ensureTimerLoop(): void {
+  if (params.timer === 0 || timerLoop !== null) return;
+  lastTickAt = Date.now();
+  timerLoop = window.setInterval(turnTimerTick, 100);
+}
+
+function stopTimerLoop(): void {
+  if (timerLoop === null) return;
+  window.clearInterval(timerLoop);
+  timerLoop = null;
+}
+
+function renderTurnTimer(): void {
+  // страховка: после конца партии отсчёт не показывается даже если состояние не успели остановить
+  const counting = params.timer > 0 && timer.running && state.status === 'playing';
+  if (!counting) {
+    timerEl.hidden = true;
+    timerEl.classList.remove('urgent');
+    return;
+  }
+  const secs = Math.ceil(timer.remainingMs / 1000);
+  timerEl.hidden = false;
+  timerEl.textContent = String(secs);
+  timerEl.classList.toggle('urgent', secs <= 2);
+}
+
+/** Отсчёт идёт только на ходе человека в живой партие; каждый новый ход — полный лимит. */
+function syncTimerWithTurn(): void {
+  timer = state.status === 'playing' && !isAiTurn() ? restartTimer(timer) : stopTimer(timer);
+  renderTurnTimer();
+}
+
+function onTimerTimeout(): void {
+  if (state.status !== 'playing' || isAiTurn()) return;
+  endedByTimeout = true;
+  state = timeoutGame(state);
+  updateStatus();
+  draw();
+  finishGameIfNeeded();
+  syncTimerWithTurn();
 }
 
 function draw(): void {
@@ -166,23 +236,29 @@ function startGame(): void {
   state = createGame(series.firstPlayer);
   hoverCell = null;
   hintEl.textContent = '';
+  endedByTimeout = false;
+  timer = createTurnTimer(params.timer);
   updateStatus();
   updateSeriesInfo();
   showScreen('screen-game');
+  ensureTimerLoop();
+  syncTimerWithTurn();
   if (isAiTurn()) scheduleAiMove();
 }
 
 function showResult(): void {
+  let title: string;
   if (state.status === 'win') {
-    resultTitleEl.textContent =
+    title =
       params.mode === 'pve'
         ? state.winner === params.side
           ? 'Победа!'
           : 'Победа AI!'
         : `Победа ${state.winner}!`;
   } else {
-    resultTitleEl.textContent = 'Ничья';
+    title = 'Ничья';
   }
+  resultTitleEl.textContent = endedByTimeout ? `Время вышло! ${title}` : title;
 
   if (series.format === 'single') {
     resultSubEl.hidden = true;
@@ -238,6 +314,7 @@ canvas.addEventListener('pointerdown', (e) => {
   updateStatus();
   draw();
   finishGameIfNeeded();
+  syncTimerWithTurn();
   if (isAiTurn()) scheduleAiMove();
 });
 
@@ -291,6 +368,10 @@ setupStartBtn.addEventListener('click', () => {
     document.querySelector<HTMLInputElement>('input[name="side"]:checked'),
     'Сторона игрока не выбрана',
   ).value;
+  const timerValue = must(
+    document.querySelector<HTMLInputElement>('input[name="timer"]:checked'),
+    'Режим таймера не выбран',
+  ).value;
 
   params = {
     mode: params.mode,
@@ -300,6 +381,7 @@ setupStartBtn.addEventListener('click', () => {
       : 'medium',
     format: format === 'bestOf3' || format === 'bestOf5' ? format : 'single',
     starter: starter === 'O' ? 'O' : 'X',
+    timer: timerValue === '5' ? 5 : timerValue === '10' ? 10 : timerValue === '30' ? 30 : 0,
   };
   series = createSeries(params.format, params.starter);
   startGame();
@@ -309,9 +391,12 @@ restartBtn.addEventListener('click', () => {
   state = createGame(series.firstPlayer);
   hoverCell = null;
   hintEl.textContent = '';
+  endedByTimeout = false;
   resultOverlay.hidden = true;
   updateStatus();
   draw();
+  ensureTimerLoop();
+  syncTimerWithTurn();
   if (isAiTurn()) scheduleAiMove();
 });
 

@@ -80,3 +80,14 @@ export function makeMove(state: GameState, index: number): MoveResult {
     },
   };
 }
+
+/** Истечение времени на ходе игрока: текущая партия проиграна им, победа — сопернику. */
+export function timeoutGame(state: GameState): GameState {
+  if (state.status !== 'playing') return state;
+  return {
+    ...state,
+    status: 'win',
+    winner: state.currentPlayer === 'X' ? 'O' : 'X',
+    winningLine: null,
+  };
+}

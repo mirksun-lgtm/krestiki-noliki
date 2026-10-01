@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, makeMove, type GameState, type Player } from './gameCore';
+import { createGame, makeMove, timeoutGame, type GameState, type Player } from './gameCore';
 
 /** Последовательность ходов (индексы клеток), после которой первый игрок занимает линию. */
 const WIN_SEQUENCES: Array<{ line: number[]; moves: number[] }> = [
@@ -155,6 +155,39 @@ describe('завершённая партия', () => {
     if (result.ok) return;
     expect(result.reason).toBe('finished');
     expect(result.state).toBe(finished);
+  });
+});
+
+describe('timeoutGame', () => {
+  it('на ходу X истечение времени — победа O, поле не тронуто', () => {
+    const state = createGame('X');
+    const result = timeoutGame(state);
+
+    expect(result.status).toBe('win');
+    expect(result.winner).toBe('O');
+    expect(result.winningLine).toBeNull();
+    expect(result.board).toEqual(Array(9).fill(null));
+    expect(result.currentPlayer).toBe('X');
+  });
+
+  it('на ходу O истечение времени — победа X', () => {
+    const result = timeoutGame(createGame('O'));
+
+    expect(result.status).toBe('win');
+    expect(result.winner).toBe('X');
+    expect(result.winningLine).toBeNull();
+  });
+
+  it('не меняет уже победную партию', () => {
+    const finished = play('X', [0, 3, 1, 4, 2]);
+
+    expect(timeoutGame(finished)).toBe(finished);
+  });
+
+  it('не меняет ничью', () => {
+    const drawn = play('X', [0, 1, 2, 4, 3, 5, 7, 6, 8]);
+
+    expect(timeoutGame(drawn)).toBe(drawn);
   });
 });
 

@@ -133,10 +133,44 @@ fieldset input[type='radio'] {
   color: #6b614f;
 }
 
+#turn-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 #status {
   margin: 0;
   font: 700 20px/1.2 system-ui, sans-serif;
   color: #3f382c;
+}
+
+#turn-timer {
+  margin: 0;
+  min-width: 48px;
+  padding: 4px 12px;
+  box-sizing: border-box;
+  text-align: center;
+  font: 700 22px/1.2 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: #4a4235;
+  background: #e7ddcb;
+  border: 1px solid #c9beae;
+  border-radius: 999px;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+#turn-timer[hidden] {
+  display: none;
+}
+
+/* Последние секунды: заметнее, но без мельтешения */
+#turn-timer.urgent {
+  color: #9c2f14;
+  background: #f6dcd0;
+  border-color: #c98a70;
 }
 
 #status[data-player='X'] {
