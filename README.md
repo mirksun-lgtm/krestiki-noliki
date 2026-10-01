@@ -2,7 +2,7 @@
 
 Уютная (cozy-fantasy) игра «Крестики-нолики» на TypeScript + Canvas: PvP на одном устройстве, PvE против AI (4 сложности), серии Best of 3/5, таймер хода, статистика и достижения. Без внешних ассетов и runtime-зависимостей — вся графика, звуки и музыка синтезируются кодом.
 
-**Играть:** https://REPLACE-WITH-LIVE-URL
+**Играть:** https://mirksun-lgtm.github.io/krestiki-noliki/
 
 ## Возможности
 
