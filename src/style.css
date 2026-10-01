@@ -87,6 +87,39 @@ fieldset input[type='radio'] {
   user-select: none;
 }
 
+#board-wrap {
+  position: relative;
+}
+
+#result-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+  background: rgba(63, 56, 44, 0.45);
+}
+
+#result-overlay[hidden] {
+  display: none;
+}
+
+.result-card {
+  width: min(280px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #f2ebe0;
+  border: 1px solid #8a7f6d;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(63, 56, 44, 0.35);
+}
+
 #side {
   display: flex;
   flex-direction: column;

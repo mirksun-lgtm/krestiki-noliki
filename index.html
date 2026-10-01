@@ -46,7 +46,19 @@
 
       <section id="screen-game" class="screen" hidden>
         <p id="series-info" hidden></p>
-        <canvas id="game-canvas" width="360" height="360"></canvas>
+        <div id="board-wrap">
+          <canvas id="game-canvas" width="360" height="360"></canvas>
+          <div id="result-overlay" hidden>
+            <div class="result-card">
+              <p id="result-title"></p>
+              <p id="result-sub" hidden></p>
+              <div class="row">
+                <button id="result-menu" type="button">В меню</button>
+                <button id="result-next" type="button"></button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div id="side">
           <p id="status" aria-live="polite">Ход: X</p>
           <p id="hint" role="status"></p>
@@ -54,15 +66,6 @@
             <button id="restart" type="button">Заново</button>
             <button id="to-menu" type="button">В меню</button>
           </div>
-        </div>
-      </section>
-
-      <section id="screen-result" class="screen" hidden>
-        <p id="result-title"></p>
-        <p id="result-sub" hidden></p>
-        <div class="row">
-          <button id="result-menu" type="button">В меню</button>
-          <button id="result-next" type="button"></button>
         </div>
       </section>
     </div>

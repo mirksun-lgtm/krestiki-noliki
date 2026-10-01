@@ -31,11 +31,12 @@ const resultTitleEl = element<HTMLElement>('result-title');
 const resultSubEl = element<HTMLElement>('result-sub');
 const resultMenuBtn = element<HTMLButtonElement>('result-menu');
 const resultNextBtn = element<HTMLButtonElement>('result-next');
+const resultOverlay = element<HTMLElement>('result-overlay');
 
 const canvas = element<HTMLCanvasElement>('game-canvas');
 const ctx = must(canvas.getContext('2d'), '2D-контекст недоступен');
 
-type ScreenId = 'screen-menu' | 'screen-setup' | 'screen-game' | 'screen-result';
+type ScreenId = 'screen-menu' | 'screen-setup' | 'screen-game';
 
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   finished: 'Партия уже окончена — начните новую',
@@ -91,6 +92,7 @@ function aiMove(): void {
 
 function showScreen(id: ScreenId): void {
   for (const screen of screens) screen.hidden = screen.id !== id;
+  resultOverlay.hidden = true;
   if (id === 'screen-game') syncCanvasSize();
 }
 
@@ -198,7 +200,9 @@ function showResult(): void {
       ? 'Новая партия'
       : 'Новая серия';
 
-  showScreen('screen-result');
+  // счёт над полем обновляем после записи результата: с плашкой поле остаётся видно
+  updateSeriesInfo();
+  resultOverlay.hidden = false;
 }
 
 function finishGameIfNeeded(): void {
@@ -305,6 +309,7 @@ restartBtn.addEventListener('click', () => {
   state = createGame(series.firstPlayer);
   hoverCell = null;
   hintEl.textContent = '';
+  resultOverlay.hidden = true;
   updateStatus();
   draw();
   if (isAiTurn()) scheduleAiMove();
