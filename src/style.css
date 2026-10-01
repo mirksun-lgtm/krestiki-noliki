@@ -237,9 +237,147 @@ button:disabled {
 
 #menu-pvp,
 #menu-pve,
+#menu-achievements,
 #menu-stats {
   width: min(280px, calc(100vw - 32px));
   font-size: 18px;
+}
+
+#achievement-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: rgba(63, 56, 44, 0.55);
+}
+
+#achievement-overlay[hidden] {
+  display: none;
+}
+
+.achievement-card {
+  width: min(300px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px;
+  box-sizing: border-box;
+  background: #fdf6e6;
+  border: 2px solid #d4a94e;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(63, 56, 44, 0.45), 0 0 32px rgba(212, 169, 78, 0.55);
+  animation: achievement-pop 0.45s ease-out;
+}
+
+@keyframes achievement-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.achievement-kicker {
+  margin: 0;
+  font: 700 14px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a8781f;
+}
+
+#achievement-icon {
+  font-size: 52px;
+  line-height: 1;
+}
+
+#achievement-title {
+  margin: 0;
+  font: 700 22px/1.2 system-ui, sans-serif;
+  color: #3f382c;
+  text-align: center;
+}
+
+#achievement-desc {
+  margin: 0;
+  font: 600 15px/1.35 system-ui, sans-serif;
+  color: #6b614f;
+  text-align: center;
+}
+
+#achievement-gain {
+  margin: 0;
+  font: 700 17px/1.2 system-ui, sans-serif;
+  color: #a8781f;
+}
+
+#achievements-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.achv-progress {
+  color: #a8781f;
+}
+
+.achv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.achv-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f2ebe0;
+  border: 1px solid #c9beae;
+  border-radius: 10px;
+}
+
+.achv-item.unlocked {
+  background: #fdf6e6;
+  border-color: #d4a94e;
+}
+
+.achv-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.achv-text {
+  flex: 1;
+  font: 700 15px/1.3 system-ui, sans-serif;
+  color: #3f382c;
+}
+
+.achv-text span {
+  font-weight: 500;
+  font-size: 13px;
+  color: #6b614f;
+}
+
+.achv-score {
+  font: 700 14px/1 system-ui, sans-serif;
+  color: #a8781f;
 }
 
 #stats-body {

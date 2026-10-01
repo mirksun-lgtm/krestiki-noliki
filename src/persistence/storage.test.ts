@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  loadAchievements,
   loadSettings,
   loadStats,
+  saveAchievements,
   saveSettings,
   saveStats,
+  ACHIEVEMENTS_KEY,
   SAVE_KEY,
   STATS_KEY,
   type SettingsStorage,
@@ -337,5 +340,125 @@ describe('saveStats', () => {
 
     expect(loadStats(store)).toEqual(SAVED_STATS);
     expect(loadSettings(store)).toEqual(VALID);
+  });
+});
+
+function rawAchievementsSeed(payload: unknown): Record<string, string> {
+  return { [ACHIEVEMENTS_KEY]: JSON.stringify(payload) };
+}
+
+describe('loadAchievements', () => {
+  it('без хранилища — пустой список', () => {
+    expect(loadAchievements(null)).toEqual([]);
+  });
+
+  it('пустое хранилище — пустой список', () => {
+    expect(loadAchievements(memoryStorage())).toEqual([]);
+  });
+
+  it('повреждённый JSON — пустой список', () => {
+    const store = memoryStorage({ [ACHIEVEMENTS_KEY]: '{тут не JSON' });
+
+    expect(loadAchievements(store)).toEqual([]);
+  });
+
+  it.each([42, null, 'привет'])(
+    'не-массив вместо сохранения (%j) — пустой список',
+    (payload) => {
+      expect(loadAchievements(memoryStorage(rawAchievementsSeed(payload)))).toEqual([]);
+    },
+  );
+
+  it('сохранение другой версии игнорируется', () => {
+    const store = memoryStorage(rawAchievementsSeed({ version: 99, unlocked: ['first-win'] }));
+
+    expect(loadAchievements(store)).toEqual([]);
+  });
+
+  it('валидный список загружается без потерь', () => {
+    const store = memoryStorage(
+      rawAchievementsSeed({ version: 1, unlocked: ['first-win', 'streak-3'] }),
+    );
+
+    expect(loadAchievements(store)).toEqual(['first-win', 'streak-3']);
+  });
+
+  it('неизвестные и нестроковые id отбрасываются, известные сохраняют порядок', () => {
+    const store = memoryStorage(
+      rawAchievementsSeed({ version: 1, unlocked: ['streak-3', 42, 'no-such', 'first-win'] }),
+    );
+
+    expect(loadAchievements(store)).toEqual(['streak-3', 'first-win']);
+  });
+
+  it('исключение при чтении хранилища не роняет загрузку', () => {
+    const broken: SettingsStorage = {
+      getItem: () => {
+        throw new Error('SecurityError');
+      },
+      setItem: () => {},
+    };
+
+    expect(loadAchievements(broken)).toEqual([]);
+  });
+
+  it('по умолчанию читает из localStorage браузера', () => {
+    vi.stubGlobal(
+      'localStorage',
+      memoryStorage(rawAchievementsSeed({ version: 1, unlocked: ['first-win'] })),
+    );
+    try {
+      expect(loadAchievements()).toEqual(['first-win']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('saveAchievements', () => {
+  it('список читается обратно без потерь', () => {
+    const store = memoryStorage();
+
+    saveAchievements(['first-win', 'beat-hard'], store);
+
+    expect(loadAchievements(store)).toEqual(['first-win', 'beat-hard']);
+  });
+
+  it('по умолчанию пишет в localStorage браузера', () => {
+    const store = memoryStorage();
+    vi.stubGlobal('localStorage', store);
+    try {
+      saveAchievements(['first-win']);
+      expect(loadAchievements()).toEqual(['first-win']);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('отсутствие хранилища не приводит к исключению', () => {
+    expect(() => saveAchievements(['first-win'], null)).not.toThrow();
+  });
+
+  it('ошибка записи (переполнение квоты) не пробрасывается наружу', () => {
+    const full: SettingsStorage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    };
+
+    expect(() => saveAchievements(['first-win'], full)).not.toThrow();
+  });
+
+  it('запись достижений не затирает статистику и настройки (разные ключи)', () => {
+    const store = memoryStorage();
+
+    saveStats(SAVED_STATS, store);
+    saveSettings(VALID, store);
+    saveAchievements(['first-win'], store);
+
+    expect(loadStats(store)).toEqual(SAVED_STATS);
+    expect(loadSettings(store)).toEqual(VALID);
+    expect(loadAchievements(store)).toEqual(['first-win']);
   });
 });

@@ -2,6 +2,7 @@ import type { Player } from '../game/gameCore';
 import type { SeriesFormat } from '../game/series';
 import type { TimerPreset } from '../game/turnTimer';
 import type { Difficulty } from '../ai/ai';
+import { ACHIEVEMENTS } from '../game/achievements';
 import { createStats, type Stats } from '../game/stats';
 
 /** Последние подтверждённые игроком настройки партии. */
@@ -196,6 +197,69 @@ export function saveStats(
   try {
     const payload = { version: SAVE_VERSION, stats: normalizeStats(stats) };
     storage.setItem(STATS_KEY, JSON.stringify(payload));
+  } catch {
+    // переполнилась квота или хранилище недоступно — сохранение просто не происходит
+  }
+}
+
+export const ACHIEVEMENTS_KEY = 'krestiki-noliki:achievements';
+
+const KNOWN_ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map((a) => a.id));
+
+/** Только известные строковые id, без дублей; чужие элементы отбрасываются. */
+function normalizeUnlocked(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string' && KNOWN_ACHIEVEMENT_IDS.has(item) && !seen.has(item)) {
+      seen.add(item);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+/**
+ * Чтение разблокированных достижений. Любая недоступность или повреждение
+ * данных (нет хранилища, битый JSON, чужая версия, мусор в массиве) → [].
+ */
+export function loadAchievements(storage: SettingsStorage | null = browserStorage()): string[] {
+  if (storage == null) return [];
+
+  let raw: string | null;
+  try {
+    raw = storage.getItem(ACHIEVEMENTS_KEY);
+  } catch {
+    return [];
+  }
+  if (raw == null) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (typeof parsed !== 'object' || parsed === null) return [];
+
+  const save = parsed as { version?: unknown; unlocked?: unknown };
+  if (save.version !== SAVE_VERSION) return [];
+  return normalizeUnlocked(save.unlocked);
+}
+
+/**
+ * Запись разблокированных достижений. Отсутствующее или неработающее хранилище —
+ * игра продолжает идти без сохранения, исключение наружу не выходит.
+ */
+export function saveAchievements(
+  unlocked: readonly string[],
+  storage: SettingsStorage | null = browserStorage(),
+): void {
+  if (storage == null) return;
+  try {
+    const payload = { version: SAVE_VERSION, unlocked: normalizeUnlocked(unlocked) };
+    storage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(payload));
   } catch {
     // переполнилась квота или хранилище недоступно — сохранение просто не происходит
   }

@@ -11,6 +11,7 @@
         <h1>Крестики-нолики</h1>
         <button id="menu-pvp" type="button">Против игрока</button>
         <button id="menu-pve" type="button">Против AI</button>
+        <button id="menu-achievements" type="button">Достижения</button>
         <button id="menu-stats" type="button">Статистика</button>
       </section>
 
@@ -52,6 +53,12 @@
         </div>
       </section>
 
+      <section id="screen-achievements" class="screen" hidden>
+        <h2>Достижения</h2>
+        <div id="achievements-body"></div>
+        <button id="achievements-back" type="button">Назад</button>
+      </section>
+
       <section id="screen-stats" class="screen" hidden>
         <h2>Статистика</h2>
         <div id="stats-body"></div>
@@ -85,6 +92,16 @@
           </div>
         </div>
       </section>
+    </div>
+    <div id="achievement-overlay" role="dialog" aria-modal="true" hidden>
+      <div class="achievement-card">
+        <p class="achievement-kicker">Достижение получено!</p>
+        <span id="achievement-icon" aria-hidden="true"></span>
+        <p id="achievement-title"></p>
+        <p id="achievement-desc"></p>
+        <p id="achievement-gain"></p>
+        <button id="achievement-close" type="button">Классно!</button>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

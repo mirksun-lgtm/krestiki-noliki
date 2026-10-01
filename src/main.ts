@@ -10,10 +10,20 @@ import {
 } from './game/turnTimer';
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
 import { chooseMove } from './ai/ai';
+import {
+  ACHIEVEMENTS,
+  achievementScore,
+  COSMETIC_UNLOCKS,
+  newlyUnlocked,
+  unlockedCosmetics,
+  type AchievementDef,
+} from './game/achievements';
 import { recordGame, type Stats } from './game/stats';
 import {
+  loadAchievements,
   loadSettings,
   loadStats,
+  saveAchievements,
   saveSettings,
   saveStats,
   type UserSettings,
@@ -33,7 +43,10 @@ function element<T extends HTMLElement>(id: string): T {
 const screens = Array.from(document.querySelectorAll<HTMLElement>('.screen'));
 const menuPvpBtn = element<HTMLButtonElement>('menu-pvp');
 const menuPveBtn = element<HTMLButtonElement>('menu-pve');
+const menuAchvBtn = element<HTMLButtonElement>('menu-achievements');
 const menuStatsBtn = element<HTMLButtonElement>('menu-stats');
+const achvBackBtn = element<HTMLButtonElement>('achievements-back');
+const achvBodyEl = element<HTMLElement>('achievements-body');
 const statsBackBtn = element<HTMLButtonElement>('stats-back');
 const statsBodyEl = element<HTMLElement>('stats-body');
 const aiDifficultyFieldset = element<HTMLFieldSetElement>('ai-difficulty');
@@ -51,11 +64,22 @@ const resultSubEl = element<HTMLElement>('result-sub');
 const resultMenuBtn = element<HTMLButtonElement>('result-menu');
 const resultNextBtn = element<HTMLButtonElement>('result-next');
 const resultOverlay = element<HTMLElement>('result-overlay');
+const achievementOverlay = element<HTMLElement>('achievement-overlay');
+const achievementIconEl = element<HTMLElement>('achievement-icon');
+const achievementTitleEl = element<HTMLElement>('achievement-title');
+const achievementDescEl = element<HTMLElement>('achievement-desc');
+const achievementGainEl = element<HTMLElement>('achievement-gain');
+const achievementCloseBtn = element<HTMLButtonElement>('achievement-close');
 
 const canvas = element<HTMLCanvasElement>('game-canvas');
 const ctx = must(canvas.getContext('2d'), '2D-контекст недоступен');
 
-type ScreenId = 'screen-menu' | 'screen-setup' | 'screen-stats' | 'screen-game';
+type ScreenId =
+  | 'screen-menu'
+  | 'screen-setup'
+  | 'screen-achievements'
+  | 'screen-stats'
+  | 'screen-game';
 
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   finished: 'Партия уже окончена — начните новую',
@@ -69,6 +93,7 @@ type Params = { mode: 'pvp' | 'pve' } & UserSettings;
 const savedSettings = loadSettings();
 let params: Params = { mode: 'pvp', ...savedSettings };
 let stats: Stats = loadStats();
+let unlocked: string[] = loadAchievements();
 let series: SeriesState = createSeries('single', 'X');
 let state: GameState = createGame('X');
 let hoverCell: number | null = null;
@@ -113,6 +138,29 @@ function showScreen(id: ScreenId): void {
   resultOverlay.hidden = true;
   if (id === 'screen-game') syncCanvasSize();
 }
+
+let achievementQueue: AchievementDef[] = [];
+
+/**
+ * Показывает следующую карточку из очереди полученных достижений.
+ * Скрытие+показ перезапускает CSS-анимацию на каждой карточке (нужен reflow).
+ */
+function showNextAchievement(): void {
+  const next = achievementQueue.shift();
+  if (next == null) {
+    achievementOverlay.hidden = true;
+    return;
+  }
+  achievementOverlay.hidden = true;
+  achievementIconEl.textContent = next.icon;
+  achievementTitleEl.textContent = next.title;
+  achievementDescEl.textContent = next.description;
+  achievementGainEl.textContent = `+${next.score} очков · всего ${achievementScore(unlocked)}`;
+  void achievementOverlay.offsetWidth;
+  achievementOverlay.hidden = false;
+}
+
+achievementCloseBtn.addEventListener('click', showNextAchievement);
 
 function turnTimerTick(): void {
   const now = Date.now();
@@ -291,7 +339,28 @@ function finishGameIfNeeded(): void {
     difficulty: params.difficulty,
   });
   saveStats(stats);
+
+  // оценка по статистике с уже записанной партией + фактам последней партии
+  const fresh = newlyUnlocked(unlocked, {
+    stats,
+    lastGame: {
+      playerWon:
+        params.mode === 'pvp' ? state.winner !== null : state.winner === params.side,
+      timerEnabled: params.timer > 0,
+      moves: state.board.filter((cell) => cell !== null).length,
+    },
+  });
+  if (fresh.length > 0) {
+    unlocked = [...unlocked, ...fresh];
+    saveAchievements(unlocked);
+    for (const id of fresh) {
+      const def = ACHIEVEMENTS.find((a) => a.id === id);
+      if (def != null) achievementQueue.push(def);
+    }
+  }
+
   showResult();
+  showNextAchievement();
 }
 
 /** Заполнение экрана статистики: значения — только числа из проверенного Stats. */
@@ -315,6 +384,32 @@ function renderStats(): void {
       <thead><tr><th>Сложность</th><th>Победы</th><th>Поражения</th><th>Ничьи</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+  `;
+}
+
+/** Заполнение экрана достижений: список из конфига + Score и прогресс разблокировки. */
+function renderAchievements(): void {
+  const score = achievementScore(unlocked);
+  const owned = new Set(unlocked);
+  const items = ACHIEVEMENTS.map((a) => {
+    const got = owned.has(a.id);
+    return `<li class="achv-item${got ? ' unlocked' : ''}">
+      <span class="achv-icon" aria-hidden="true">${got ? a.icon : '🔒'}</span>
+      <span class="achv-text"><b>${a.title}</b><br /><span>${a.description}</span></span>
+      <span class="achv-score">+${a.score}</span>
+    </li>`;
+  }).join('');
+
+  const next = COSMETIC_UNLOCKS.find((c) => score < c.requiredScore);
+  const gained = unlockedCosmetics(score);
+  const progress = next == null
+    ? `Разблокировано: ${gained.map((c) => `«${c.title}»`).join(', ')}`
+    : `До «${next.title}»: <b>${next.requiredScore - score}</b> очков`;
+
+  achvBodyEl.innerHTML = `
+    <p class="stat-line">Achievement Score: <b>${score}</b> · Достижений: <b>${owned.size}</b> из ${ACHIEVEMENTS.length}</p>
+    <p class="stat-line achv-progress">${progress}</p>
+    <ul class="achv-list">${items}</ul>
   `;
 }
 
@@ -395,6 +490,13 @@ menuPveBtn.addEventListener('click', () => {
 });
 
 setupBackBtn.addEventListener('click', () => showScreen('screen-menu'));
+
+menuAchvBtn.addEventListener('click', () => {
+  renderAchievements();
+  showScreen('screen-achievements');
+});
+
+achvBackBtn.addEventListener('click', () => showScreen('screen-menu'));
 
 menuStatsBtn.addEventListener('click', () => {
   renderStats();
