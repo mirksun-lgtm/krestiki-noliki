@@ -2,6 +2,7 @@ import './style.css';
 import { createGame, makeMove, type GameState, type Player } from './game/gameCore';
 import { createSeries, recordGameResult, targetWins, type SeriesFormat, type SeriesState } from './game/series';
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
+import { chooseMove, type Difficulty } from './ai/ai';
 
 function must<T>(value: T | null | undefined, message: string): T {
   if (value == null) throw new Error(message);
@@ -16,6 +17,8 @@ function element<T extends HTMLElement>(id: string): T {
 
 const screens = Array.from(document.querySelectorAll<HTMLElement>('.screen'));
 const menuPvpBtn = element<HTMLButtonElement>('menu-pvp');
+const menuPveBtn = element<HTMLButtonElement>('menu-pve');
+const aiDifficultyFieldset = element<HTMLFieldSetElement>('ai-difficulty');
 const setupBackBtn = element<HTMLButtonElement>('setup-back');
 const setupStartBtn = element<HTMLButtonElement>('setup-start');
 const seriesInfoEl = element<HTMLElement>('series-info');
@@ -39,12 +42,43 @@ const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   occupied: 'Клетка занята',
 };
 
-let params: { format: SeriesFormat; starter: Player } = { format: 'single', starter: 'X' };
+/** Человек в PvE всегда играет за X, AI — за O. */
+const HUMAN_PLAYER: Player = 'X';
+const AI_PLAYER: Player = 'O';
+
+let params: { mode: 'pvp' | 'pve'; difficulty: Difficulty; format: SeriesFormat; starter: Player } = {
+  mode: 'pvp',
+  difficulty: 'medium',
+  format: 'single',
+  starter: 'X',
+};
 let series: SeriesState = createSeries('single', 'X');
 let state: GameState = createGame('X');
 let hoverCell: number | null = null;
 /** Сторона поля в CSS-пикселях, обновляется при resize. */
 let boardSize = 360;
+
+function isAiTurn(): boolean {
+  return params.mode === 'pve' && state.status === 'playing' && state.currentPlayer === AI_PLAYER;
+}
+
+function scheduleAiMove(): void {
+  window.setTimeout(aiMove, 400);
+}
+
+function aiMove(): void {
+  if (!isAiTurn()) return;
+  const cell = chooseMove(state, params.difficulty);
+  if (cell === null) return;
+  const result = makeMove(state, cell);
+  if (!result.ok) return;
+
+  hintEl.textContent = '';
+  state = result.state;
+  updateStatus();
+  draw();
+  finishGameIfNeeded();
+}
 
 function showScreen(id: ScreenId): void {
   for (const screen of screens) screen.hidden = screen.id !== id;
@@ -74,10 +108,17 @@ function syncCanvasSize(): void {
 
 function updateStatus(): void {
   if (state.status === 'playing') {
-    statusEl.textContent = `Ход: ${state.currentPlayer}`;
-    statusEl.dataset.player = state.currentPlayer;
+    if (isAiTurn()) {
+      statusEl.textContent = 'Ход AI…';
+      statusEl.dataset.player = AI_PLAYER;
+    } else {
+      statusEl.textContent = `Ход: ${state.currentPlayer}`;
+      statusEl.dataset.player = state.currentPlayer;
+    }
   } else if (state.status === 'win') {
-    statusEl.textContent = `Победа: ${state.winner}!`;
+    statusEl.textContent = params.mode === 'pve' && state.winner === AI_PLAYER
+      ? 'Победа AI!'
+      : `Победа: ${state.winner}!`;
     statusEl.dataset.player = state.winner ?? '';
   } else {
     statusEl.textContent = 'Ничья';
@@ -92,13 +133,19 @@ function gameNumberLabel(): string {
   return next <= maxGames ? `Партия ${next} из ${maxGames}` : `Партия ${next}`;
 }
 
+/** Счёт для подписей: в PvE стороны — это Вы и AI. */
+function scoreLabel(): string {
+  const { X, O } = series.score;
+  return params.mode === 'pve' ? `Вы ${X} — ${O} AI` : `X ${X} — ${O} O`;
+}
+
 function updateSeriesInfo(): void {
   if (series.format === 'single') {
     seriesInfoEl.hidden = true;
     return;
   }
   seriesInfoEl.hidden = false;
-  seriesInfoEl.textContent = `${gameNumberLabel()} · X ${series.score.X} — ${series.score.O} O`;
+  seriesInfoEl.textContent = `${gameNumberLabel()} · ${scoreLabel()}`;
 }
 
 function startGame(): void {
@@ -108,16 +155,26 @@ function startGame(): void {
   updateStatus();
   updateSeriesInfo();
   showScreen('screen-game');
+  if (isAiTurn()) scheduleAiMove();
 }
 
 function showResult(): void {
-  resultTitleEl.textContent = state.status === 'win' ? `Победа ${state.winner}!` : 'Ничья';
+  if (state.status === 'win') {
+    resultTitleEl.textContent =
+      params.mode === 'pve'
+        ? state.winner === HUMAN_PLAYER
+          ? 'Победа!'
+          : 'Победа AI!'
+        : `Победа ${state.winner}!`;
+  } else {
+    resultTitleEl.textContent = 'Ничья';
+  }
 
   if (series.format === 'single') {
     resultSubEl.hidden = true;
   } else {
     resultSubEl.hidden = false;
-    const score = `X ${series.score.X} — ${series.score.O} O`;
+    const score = scoreLabel();
     resultSubEl.textContent = series.finished
       ? `Серия за ${series.winner}! Счёт: ${score}`
       : `${gameNumberLabel()} · Счёт: ${score}`;
@@ -147,6 +204,10 @@ function cellFromEvent(e: PointerEvent): number | null {
 
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
+  if (isAiTurn()) {
+    hintEl.textContent = 'Сейчас ходит AI';
+    return;
+  }
   const cell = cellFromEvent(e);
   if (cell === null) return;
 
@@ -161,6 +222,7 @@ canvas.addEventListener('pointerdown', (e) => {
   updateStatus();
   draw();
   finishGameIfNeeded();
+  if (isAiTurn()) scheduleAiMove();
 });
 
 // Подсветка клетки — только для мыши: на тач-устройствах hover не имеет смысла.
@@ -180,7 +242,18 @@ canvas.addEventListener('pointerleave', () => {
 
 window.addEventListener('resize', syncCanvasSize);
 
-menuPvpBtn.addEventListener('click', () => showScreen('screen-setup'));
+menuPvpBtn.addEventListener('click', () => {
+  params.mode = 'pvp';
+  aiDifficultyFieldset.hidden = true;
+  showScreen('screen-setup');
+});
+
+menuPveBtn.addEventListener('click', () => {
+  params.mode = 'pve';
+  aiDifficultyFieldset.hidden = false;
+  showScreen('screen-setup');
+});
+
 setupBackBtn.addEventListener('click', () => showScreen('screen-menu'));
 
 setupStartBtn.addEventListener('click', () => {
@@ -192,8 +265,16 @@ setupStartBtn.addEventListener('click', () => {
     document.querySelector<HTMLInputElement>('input[name="starter"]:checked'),
     'Первый игрок не выбран',
   ).value;
+  const difficulty = must(
+    document.querySelector<HTMLInputElement>('input[name="difficulty"]:checked'),
+    'Сложность не выбрана',
+  ).value;
 
   params = {
+    mode: params.mode,
+    difficulty: difficulty === 'easy' || difficulty === 'hard' || difficulty === 'impossible'
+      ? difficulty
+      : 'medium',
     format: format === 'bestOf3' || format === 'bestOf5' ? format : 'single',
     starter: starter === 'O' ? 'O' : 'X',
   };
@@ -207,6 +288,7 @@ restartBtn.addEventListener('click', () => {
   hintEl.textContent = '';
   updateStatus();
   draw();
+  if (isAiTurn()) scheduleAiMove();
 });
 
 toMenuBtn.addEventListener('click', () => showScreen('screen-menu'));

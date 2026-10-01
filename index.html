@@ -10,11 +10,18 @@
       <section id="screen-menu" class="screen">
         <h1>Крестики-нолики</h1>
         <button id="menu-pvp" type="button">Против игрока</button>
-        <button id="menu-pve" type="button" disabled>Против AI — скоро</button>
+        <button id="menu-pve" type="button">Против AI</button>
       </section>
 
       <section id="screen-setup" class="screen" hidden>
         <h2>Новая партия</h2>
+        <fieldset id="ai-difficulty" hidden>
+          <legend>Сложность AI</legend>
+          <label><input type="radio" name="difficulty" value="easy" /> Easy</label>
+          <label><input type="radio" name="difficulty" value="medium" checked /> Medium</label>
+          <label><input type="radio" name="difficulty" value="hard" /> Hard</label>
+          <label><input type="radio" name="difficulty" value="impossible" /> Impossible</label>
+        </fieldset>
         <fieldset>
           <legend>Формат</legend>
           <label><input type="radio" name="format" value="single" checked /> Одна партия</label>

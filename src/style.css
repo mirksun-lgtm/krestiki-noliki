@@ -50,6 +50,10 @@ legend {
   color: #6b614f;
 }
 
+fieldset[hidden] {
+  display: none;
+}
+
 fieldset label {
   display: flex;
   align-items: center;
