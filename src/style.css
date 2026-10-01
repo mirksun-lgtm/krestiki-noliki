@@ -88,7 +88,8 @@ fieldset label {
   cursor: pointer;
 }
 
-fieldset input[type='radio'] {
+fieldset input[type='radio'],
+fieldset input[type='checkbox'] {
   width: 20px;
   height: 20px;
   accent-color: var(--accent);
@@ -143,6 +144,22 @@ fieldset input[type='radio'] {
   border: 1px solid var(--line-strong);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(58, 47, 33, 0.35);
+  animation: result-pop 0.3s ease-out;
+}
+
+/* Появление плашки результата: короткий акцент на итоге партии */
+@keyframes result-pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 #side {
@@ -206,6 +223,22 @@ fieldset input[type='radio'] {
   color: var(--accent);
 }
 
+/* Мягкий импульс статуса при смене хода (перезапуск классом из main.ts) */
+#status.status-pulse {
+  animation: status-pulse 0.25s ease-out;
+}
+
+@keyframes status-pulse {
+  from {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 #hint {
   margin: 0;
   min-height: 1.2em;
@@ -266,7 +299,8 @@ button:disabled {
 #menu-pvp,
 #menu-pve,
 #menu-achievements,
-#menu-stats {
+#menu-stats,
+#menu-settings {
   width: min(280px, calc(100vw - 32px));
   font-size: 18px;
 }

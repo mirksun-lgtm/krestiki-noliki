@@ -264,3 +264,62 @@ export function saveAchievements(
     // переполнилась квота или хранилище недоступно — сохранение просто не происходит
   }
 }
+
+export const AUDIO_KEY = 'krestiki-noliki:audio';
+
+/** Настройки звука приложения (звук музыки добавится на её этапе). */
+export interface AudioSettings {
+  sfx: boolean;
+}
+
+const DEFAULT_AUDIO: AudioSettings = { sfx: true };
+
+/**
+ * Чтение настроек звука. Любая недоступность или повреждение данных
+ * (нет хранилища, битый JSON, чужая версия, невалидные поля) → звук включён.
+ */
+export function loadAudioSettings(
+  storage: SettingsStorage | null = browserStorage(),
+): AudioSettings {
+  if (storage == null) return { ...DEFAULT_AUDIO };
+
+  let raw: string | null;
+  try {
+    raw = storage.getItem(AUDIO_KEY);
+  } catch {
+    return { ...DEFAULT_AUDIO };
+  }
+  if (raw == null) return { ...DEFAULT_AUDIO };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { ...DEFAULT_AUDIO };
+  }
+  if (typeof parsed !== 'object' || parsed === null) return { ...DEFAULT_AUDIO };
+
+  const save = parsed as { version?: unknown; audio?: unknown };
+  if (save.version !== SAVE_VERSION) return { ...DEFAULT_AUDIO };
+  const source = asObject(save.audio);
+  return { sfx: typeof source.sfx === 'boolean' ? source.sfx : DEFAULT_AUDIO.sfx };
+}
+
+/**
+ * Запись настроек звука. Отсутствующее или неработающее хранилище —
+ * игра продолжает идти без сохранения, исключение наружу не выходит.
+ */
+export function saveAudioSettings(
+  settings: AudioSettings,
+  storage: SettingsStorage | null = browserStorage(),
+): void {
+  if (storage == null) return;
+  try {
+    storage.setItem(
+      AUDIO_KEY,
+      JSON.stringify({ version: SAVE_VERSION, audio: { sfx: settings.sfx } }),
+    );
+  } catch {
+    // переполнилась квота или хранилище недоступно — сохранение просто не происходит
+  }
+}

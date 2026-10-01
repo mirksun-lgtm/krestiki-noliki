@@ -6,6 +6,22 @@ export interface BoardView {
   size: number;
   /** Клетка под курсором мыши (null — нет). */
   hoverCell: number | null;
+  /**
+   * Появление только что поставленного знака: клетка и прогресс 0..1
+   * (null — знаки рисуются целиком, без анимации).
+   */
+  markAnim?: { cell: number; progress: number } | null;
+  /** Прогресс отрисовки победной линии 0..1; по умолчанию 1 — целиком. */
+  winProgress?: number;
+}
+
+/**
+ * Ease-out масштаб по прогрессу появления: 0 — ничего не видно,
+ * 1 — полный размер; значения вне [0;1] обрезаются.
+ */
+export function appearScale(progress: number): number {
+  const t = Math.min(1, Math.max(0, progress));
+  return 1 - (1 - t) * (1 - t);
 }
 
 /**
@@ -133,10 +149,19 @@ export function drawBoard(ctx: CanvasRenderingContext2D, state: GameState, view:
   ctx.stroke();
 
   ctx.lineWidth = Math.max(3, size / 55);
+  const anim = view.markAnim ?? null;
   for (let index = 0; index < 9; index++) {
     const mark = state.board[index];
     if (!mark) continue;
     const { x: cx, y: cy } = cellCenter(index, size);
+    const scale = anim != null && anim.cell === index ? appearScale(anim.progress) : 1;
+    if (scale <= 0) continue;
+    ctx.save();
+    if (scale !== 1) {
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.translate(-cx, -cy);
+    }
     ctx.strokeStyle = mark === 'X' ? COLORS.marksX : COLORS.marksO;
     ctx.beginPath();
     for (const stroke of markStrokes(mark, cx, cy, size)) {
@@ -148,23 +173,29 @@ export function drawBoard(ctx: CanvasRenderingContext2D, state: GameState, view:
       }
     }
     ctx.stroke();
+    ctx.restore();
   }
 
   if (state.winningLine) {
-    const { x1, y1, x2, y2 } = winningLinePoints(state.winningLine, size);
-    ctx.lineCap = 'round';
-    // мягкое свечение + ядро линии
-    ctx.strokeStyle = COLORS.winGlow;
-    ctx.lineWidth = Math.max(8, size / 20);
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-    ctx.strokeStyle = COLORS.winLine;
-    ctx.lineWidth = Math.max(4, size / 40);
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
+    const t = appearScale(view.winProgress ?? 1);
+    if (t > 0) {
+      const { x1, y1, x2, y2 } = winningLinePoints(state.winningLine, size);
+      const ex = x1 + (x2 - x1) * t;
+      const ey = y1 + (y2 - y1) * t;
+      ctx.lineCap = 'round';
+      // мягкое свечение + ядро линии
+      ctx.strokeStyle = COLORS.winGlow;
+      ctx.lineWidth = Math.max(8, size / 20);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.strokeStyle = COLORS.winLine;
+      ctx.lineWidth = Math.max(4, size / 40);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
   }
 }

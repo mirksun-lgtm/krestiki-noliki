@@ -10,6 +10,7 @@ import {
 } from './game/turnTimer';
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
 import { chooseMove } from './ai/ai';
+import { initSfx, outcomeSfx, playSfx, setSfxEnabled } from './audio/sfx';
 import {
   ACHIEVEMENTS,
   achievementScore,
@@ -21,9 +22,11 @@ import {
 import { recordGame, type Stats } from './game/stats';
 import {
   loadAchievements,
+  loadAudioSettings,
   loadSettings,
   loadStats,
   saveAchievements,
+  saveAudioSettings,
   saveSettings,
   saveStats,
   type UserSettings,
@@ -45,6 +48,9 @@ const menuPvpBtn = element<HTMLButtonElement>('menu-pvp');
 const menuPveBtn = element<HTMLButtonElement>('menu-pve');
 const menuAchvBtn = element<HTMLButtonElement>('menu-achievements');
 const menuStatsBtn = element<HTMLButtonElement>('menu-stats');
+const menuSettingsBtn = element<HTMLButtonElement>('menu-settings');
+const settingsBackBtn = element<HTMLButtonElement>('settings-back');
+const sfxToggle = element<HTMLInputElement>('sfx-toggle');
 const achvBackBtn = element<HTMLButtonElement>('achievements-back');
 const achvBodyEl = element<HTMLElement>('achievements-body');
 const statsBackBtn = element<HTMLButtonElement>('stats-back');
@@ -79,6 +85,7 @@ type ScreenId =
   | 'screen-setup'
   | 'screen-achievements'
   | 'screen-stats'
+  | 'screen-settings'
   | 'screen-game';
 
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
@@ -92,6 +99,7 @@ type Params = { mode: 'pvp' | 'pve' } & UserSettings;
 /** Сохранённые настройки живут дольше перезагрузки; сама партия — нет (GDD §21). */
 const savedSettings = loadSettings();
 let params: Params = { mode: 'pvp', ...savedSettings };
+const audioSettings = loadAudioSettings();
 let stats: Stats = loadStats();
 let unlocked: string[] = loadAchievements();
 let series: SeriesState = createSeries('single', 'X');
@@ -103,7 +111,16 @@ let boardSize = 360;
 let timer: TurnTimer = createTurnTimer(0);
 let timerLoop: number | null = null;
 let lastTickAt = 0;
+/** Последняя показанная секунда отсчёта — для сигнала тиканья. */
+let lastShownSecs = -1;
 let endedByTimeout = false;
+
+/** Анимация появления знака и победной линии: время старта, крутится в rAF. */
+let markAnim: { cell: number; start: number } | null = null;
+let winAnim: { start: number } | null = null;
+let animRaf: number | null = null;
+const MARK_ANIM_MS = 220;
+const WIN_ANIM_MS = 340;
 
 function aiSide(): Player {
   return params.side === 'X' ? 'O' : 'X';
@@ -127,13 +144,17 @@ function aiMove(): void {
   hintEl.textContent = '';
   state = result.state;
   updateStatus();
+  beginMarkAnim(cell);
   draw();
+  const playingAfterMove = state.status === 'playing';
   finishGameIfNeeded();
+  if (playingAfterMove) playSfx('move');
   syncTimerWithTurn();
 }
 
 function showScreen(id: ScreenId): void {
   stopTimerLoop();
+  clearAnims();
   for (const screen of screens) screen.hidden = screen.id !== id;
   resultOverlay.hidden = true;
   if (id === 'screen-game') syncCanvasSize();
@@ -158,9 +179,25 @@ function showNextAchievement(): void {
   achievementGainEl.textContent = `+${next.score} очков · всего ${achievementScore(unlocked)}`;
   void achievementOverlay.offsetWidth;
   achievementOverlay.hidden = false;
+  playSfx('achievement');
 }
 
 achievementCloseBtn.addEventListener('click', showNextAchievement);
+
+let achievementDelay: number | null = null;
+
+/**
+ * Карточки полученных достижений показываются с короткой паузой:
+ * не перекрывают плашку результата и не накладываются на её звук.
+ */
+function scheduleAchievementCards(): void {
+  if (achievementQueue.length === 0) return;
+  if (achievementDelay !== null) window.clearTimeout(achievementDelay);
+  achievementDelay = window.setTimeout(() => {
+    achievementDelay = null;
+    showNextAchievement();
+  }, 650);
+}
 
 function turnTimerTick(): void {
   const now = Date.now();
@@ -196,6 +233,11 @@ function renderTurnTimer(): void {
   timerEl.hidden = false;
   timerEl.textContent = String(secs);
   timerEl.classList.toggle('urgent', secs <= 2);
+  if (secs !== lastShownSecs) {
+    // сигнал таймера — на последних трёх секундах отсчёта, при каждом новом отсчёте
+    if (secs <= 3 && secs >= 1 && secs < lastShownSecs) playSfx('tick');
+    lastShownSecs = secs;
+  }
 }
 
 /** Отсчёт идёт только на ходе человека в живой партие; каждый новый ход — полный лимит. */
@@ -214,8 +256,48 @@ function onTimerTimeout(): void {
   syncTimerWithTurn();
 }
 
+function beginMarkAnim(cell: number): void {
+  markAnim = { cell, start: performance.now() };
+  runAnim();
+}
+
+function beginWinAnim(): void {
+  winAnim = { start: performance.now() };
+  runAnim();
+}
+
+function clearAnims(): void {
+  markAnim = null;
+  winAnim = null;
+  if (animRaf !== null) {
+    cancelAnimationFrame(animRaf);
+    animRaf = null;
+  }
+}
+
+function runAnim(): void {
+  if (animRaf === null) animRaf = requestAnimationFrame(stepAnim);
+}
+
+function stepAnim(now: number): void {
+  animRaf = null;
+  if (markAnim !== null && now - markAnim.start >= MARK_ANIM_MS) markAnim = null;
+  if (winAnim !== null && now - winAnim.start >= WIN_ANIM_MS) winAnim = null;
+  draw();
+  if (markAnim !== null || winAnim !== null) animRaf = requestAnimationFrame(stepAnim);
+}
+
 function draw(): void {
-  drawBoard(ctx, state, { size: boardSize, hoverCell });
+  const now = performance.now();
+  drawBoard(ctx, state, {
+    size: boardSize,
+    hoverCell,
+    markAnim:
+      markAnim === null
+        ? null
+        : { cell: markAnim.cell, progress: (now - markAnim.start) / MARK_ANIM_MS },
+    winProgress: winAnim === null ? undefined : (now - winAnim.start) / WIN_ANIM_MS,
+  });
 }
 
 /** Синхронизация внутреннего размера canvas с CSS-размером и devicePixelRatio. */
@@ -253,6 +335,10 @@ function updateStatus(): void {
     statusEl.textContent = 'Ничья';
     statusEl.dataset.player = '';
   }
+  // мягкий импульс при каждой смене статуса
+  statusEl.classList.remove('status-pulse');
+  void statusEl.offsetWidth;
+  statusEl.classList.add('status-pulse');
 }
 
 /** Номер партии: с ничьими серия может выйти за пределы классического «из N». */
@@ -360,7 +446,20 @@ function finishGameIfNeeded(): void {
   }
 
   showResult();
-  showNextAchievement();
+  if (state.winningLine !== null) {
+    beginWinAnim();
+    // перерисовать сразу с прогрессом 0: полная линия не должна мелькнуть до анимации
+    draw();
+  }
+  playSfx(
+    outcomeSfx({
+      mode: params.mode,
+      winner: state.winner,
+      side: params.side,
+      timedOut: endedByTimeout,
+    }),
+  );
+  scheduleAchievementCards();
 }
 
 /** Заполнение экрана статистики: значения — только числа из проверенного Stats. */
@@ -424,6 +523,7 @@ canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   if (isAiTurn()) {
     hintEl.textContent = 'Сейчас ходит AI';
+    playSfx('error');
     return;
   }
   const cell = cellFromEvent(e);
@@ -432,14 +532,19 @@ canvas.addEventListener('pointerdown', (e) => {
   const result = makeMove(state, cell);
   if (!result.ok) {
     hintEl.textContent = HINTS[result.reason];
+    playSfx('error');
     return;
   }
 
   hintEl.textContent = '';
   state = result.state;
   updateStatus();
+  beginMarkAnim(cell);
   draw();
+  const playingAfterMove = state.status === 'playing';
   finishGameIfNeeded();
+  // финальный ход без отдельного «щелчка» — его подменяет звук результата
+  if (playingAfterMove) playSfx('move');
   syncTimerWithTurn();
   if (isAiTurn()) scheduleAiMove();
 });
@@ -505,6 +610,17 @@ menuStatsBtn.addEventListener('click', () => {
 
 statsBackBtn.addEventListener('click', () => showScreen('screen-menu'));
 
+menuSettingsBtn.addEventListener('click', () => showScreen('screen-settings'));
+
+settingsBackBtn.addEventListener('click', () => showScreen('screen-menu'));
+
+sfxToggle.addEventListener('change', () => {
+  audioSettings.sfx = sfxToggle.checked;
+  setSfxEnabled(audioSettings.sfx);
+  saveAudioSettings(audioSettings);
+  if (audioSettings.sfx) playSfx('tick'); // слышимый отклик сразу при включении
+});
+
 setupStartBtn.addEventListener('click', () => {
   const format = must(
     document.querySelector<HTMLInputElement>('input[name="format"]:checked'),
@@ -548,6 +664,7 @@ restartBtn.addEventListener('click', () => {
   hintEl.textContent = '';
   endedByTimeout = false;
   resultOverlay.hidden = true;
+  clearAnims();
   updateStatus();
   draw();
   ensureTimerLoop();
@@ -567,5 +684,8 @@ resultNextBtn.addEventListener('click', () => {
   startGame();
 });
 
+setSfxEnabled(audioSettings.sfx);
+sfxToggle.checked = audioSettings.sfx;
+initSfx();
 applySettingsToForm(savedSettings);
 showScreen('screen-menu');

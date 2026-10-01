@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  appearScale,
   cellAtPoint,
   cellCenter,
   markStrokes,
@@ -147,5 +148,33 @@ describe('markStrokes', () => {
     const bigX = curves(markStrokes('X', 100, 100, 300));
     const reach = (c: Curve) => Math.hypot(c.x1 - 100, c.y1 - 100);
     expect(reach(bigX[0])).toBeCloseTo(reach(smallX[0]) * 2);
+  });
+});
+
+describe('appearScale', () => {
+  it('прогресс 0 → масштаб 0 (знак не виден)', () => {
+    expect(appearScale(0)).toBe(0);
+  });
+
+  it('прогресс 1 → масштаб 1 (полный размер)', () => {
+    expect(appearScale(1)).toBe(1);
+  });
+
+  it('значения вне [0;1] обрезаются', () => {
+    expect(appearScale(-0.5)).toBe(0);
+    expect(appearScale(1.7)).toBe(1);
+  });
+
+  it('ease-out: на середине прогресса масштаб больше половины', () => {
+    expect(appearScale(0.5)).toBeGreaterThan(0.5);
+  });
+
+  it('монотонно растёт от 0 до 1', () => {
+    let previous = -1;
+    for (const t of [0, 0.1, 0.3, 0.5, 0.8, 1]) {
+      const scale = appearScale(t);
+      expect(scale).toBeGreaterThanOrEqual(previous);
+      previous = scale;
+    }
   });
 });
