@@ -267,12 +267,13 @@ export function saveAchievements(
 
 export const AUDIO_KEY = 'krestiki-noliki:audio';
 
-/** Настройки звука приложения (звук музыки добавится на её этапе). */
+/** Настройки звука приложения. */
 export interface AudioSettings {
   sfx: boolean;
+  music: boolean;
 }
 
-const DEFAULT_AUDIO: AudioSettings = { sfx: true };
+const DEFAULT_AUDIO: AudioSettings = { sfx: true, music: true };
 
 /**
  * Чтение настроек звука. Любая недоступность или повреждение данных
@@ -302,7 +303,10 @@ export function loadAudioSettings(
   const save = parsed as { version?: unknown; audio?: unknown };
   if (save.version !== SAVE_VERSION) return { ...DEFAULT_AUDIO };
   const source = asObject(save.audio);
-  return { sfx: typeof source.sfx === 'boolean' ? source.sfx : DEFAULT_AUDIO.sfx };
+  return {
+    sfx: typeof source.sfx === 'boolean' ? source.sfx : DEFAULT_AUDIO.sfx,
+    music: typeof source.music === 'boolean' ? source.music : DEFAULT_AUDIO.music,
+  };
 }
 
 /**
@@ -317,7 +321,7 @@ export function saveAudioSettings(
   try {
     storage.setItem(
       AUDIO_KEY,
-      JSON.stringify({ version: SAVE_VERSION, audio: { sfx: settings.sfx } }),
+      JSON.stringify({ version: SAVE_VERSION, audio: { sfx: settings.sfx, music: settings.music } }),
     );
   } catch {
     // переполнилась квота или хранилище недоступно — сохранение просто не происходит

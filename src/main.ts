@@ -11,6 +11,7 @@ import {
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
 import { chooseMove } from './ai/ai';
 import { initSfx, outcomeSfx, playSfx, setSfxEnabled } from './audio/sfx';
+import { createMusic, playMusic, stopMusic, setMusicEnabled } from './audio/music';
 import {
   ACHIEVEMENTS,
   achievementScore,
@@ -51,6 +52,7 @@ const menuStatsBtn = element<HTMLButtonElement>('menu-stats');
 const menuSettingsBtn = element<HTMLButtonElement>('menu-settings');
 const settingsBackBtn = element<HTMLButtonElement>('settings-back');
 const sfxToggle = element<HTMLInputElement>('sfx-toggle');
+const musicToggle = element<HTMLInputElement>('music-toggle');
 const achvBackBtn = element<HTMLButtonElement>('achievements-back');
 const achvBodyEl = element<HTMLElement>('achievements-body');
 const statsBackBtn = element<HTMLButtonElement>('stats-back');
@@ -115,6 +117,9 @@ let lastTickAt = 0;
 let lastShownSecs = -1;
 let endedByTimeout = false;
 
+/** Музыкальный контроллер. */
+const music = createMusic();
+
 /** Анимация появления знака и победной линии: время старта, крутится в rAF. */
 let markAnim: { cell: number; start: number } | null = null;
 let winAnim: { start: number } | null = null;
@@ -157,7 +162,12 @@ function showScreen(id: ScreenId): void {
   clearAnims();
   for (const screen of screens) screen.hidden = screen.id !== id;
   resultOverlay.hidden = true;
-  if (id === 'screen-game') syncCanvasSize();
+  if (id === 'screen-game') {
+    syncCanvasSize();
+    if (audioSettings.music) playMusic(music);
+  } else {
+    stopMusic(music);
+  }
 }
 
 let achievementQueue: AchievementDef[] = [];
@@ -621,6 +631,13 @@ sfxToggle.addEventListener('change', () => {
   if (audioSettings.sfx) playSfx('tick'); // слышимый отклик сразу при включении
 });
 
+musicToggle.addEventListener('change', () => {
+  audioSettings.music = musicToggle.checked;
+  setMusicEnabled(music, audioSettings.music);
+  saveAudioSettings(audioSettings);
+  if (audioSettings.music) playMusic(music); // сразу играем, если находимся на игровом экране
+});
+
 setupStartBtn.addEventListener('click', () => {
   const format = must(
     document.querySelector<HTMLInputElement>('input[name="format"]:checked'),
@@ -686,6 +703,8 @@ resultNextBtn.addEventListener('click', () => {
 
 setSfxEnabled(audioSettings.sfx);
 sfxToggle.checked = audioSettings.sfx;
+setMusicEnabled(music, audioSettings.music);
+musicToggle.checked = audioSettings.music;
 initSfx();
 applySettingsToForm(savedSettings);
 showScreen('screen-menu');

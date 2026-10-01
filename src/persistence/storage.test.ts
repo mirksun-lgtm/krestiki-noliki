@@ -466,8 +466,8 @@ describe('saveAchievements', () => {
   });
 });
 
-/** Настройки звука по умолчанию — включён; литерал, не из кода под тестом. */
-const AUDIO_FALLBACK = { sfx: true } as const;
+/** Настройки звука по умолчанию — включены; литерал, не из кода под тестом. */
+const AUDIO_FALLBACK = { sfx: true, music: true } as const;
 
 function rawAudioSeed(payload: unknown): Record<string, string> {
   return { [AUDIO_KEY]: JSON.stringify(payload) };
@@ -510,10 +510,25 @@ describe('loadAudioSettings', () => {
     },
   );
 
+  it.each(['yes', 1, null])(
+    'невалидное значение music (%j) — музыка включена',
+    (value) => {
+      const store = memoryStorage(rawAudioSeed({ version: 1, audio: { sfx: true, music: value } }));
+
+      expect(loadAudioSettings(store)).toEqual({ sfx: true, music: true });
+    },
+  );
+
   it('сохранённое sfx: false загружается', () => {
     const store = memoryStorage(rawAudioSeed({ version: 1, audio: { sfx: false } }));
 
-    expect(loadAudioSettings(store)).toEqual({ sfx: false });
+    expect(loadAudioSettings(store)).toEqual({ sfx: false, music: true });
+  });
+
+  it('сохранённое music: false загружается', () => {
+    const store = memoryStorage(rawAudioSeed({ version: 1, audio: { music: false } }));
+
+    expect(loadAudioSettings(store)).toEqual({ sfx: true, music: false });
   });
 
   it('неполное сохранение дополняется дефолтом', () => {
@@ -534,9 +549,9 @@ describe('loadAudioSettings', () => {
   });
 
   it('по умолчанию читает из localStorage браузера', () => {
-    vi.stubGlobal('localStorage', memoryStorage(rawAudioSeed({ version: 1, audio: { sfx: false } })));
+    vi.stubGlobal('localStorage', memoryStorage(rawAudioSeed({ version: 1, audio: { sfx: false, music: false } })));
     try {
-      expect(loadAudioSettings()).toEqual({ sfx: false });
+      expect(loadAudioSettings()).toEqual({ sfx: false, music: false });
     } finally {
       vi.unstubAllGlobals();
     }
@@ -547,32 +562,32 @@ describe('saveAudioSettings', () => {
   it('записанные настройки звука читаются обратно без потерь', () => {
     const store = memoryStorage();
 
-    saveAudioSettings({ sfx: false }, store);
+    saveAudioSettings({ sfx: false, music: false }, store);
 
-    expect(loadAudioSettings(store)).toEqual({ sfx: false });
+    expect(loadAudioSettings(store)).toEqual({ sfx: false, music: false });
   });
 
-  it('пишет формат {version: 1, audio: {sfx}} под своим ключом', () => {
+  it('пишет формат {version: 1, audio: {sfx, music}} под своим ключом', () => {
     const store = memoryStorage();
 
-    saveAudioSettings({ sfx: true }, store);
+    saveAudioSettings({ sfx: true, music: true }, store);
 
-    expect(store.data[AUDIO_KEY]).toBe(JSON.stringify({ version: 1, audio: { sfx: true } }));
+    expect(store.data[AUDIO_KEY]).toBe(JSON.stringify({ version: 1, audio: { sfx: true, music: true } }));
   });
 
   it('по умолчанию пишет в localStorage браузера', () => {
     const store = memoryStorage();
     vi.stubGlobal('localStorage', store);
     try {
-      saveAudioSettings({ sfx: false });
-      expect(loadAudioSettings()).toEqual({ sfx: false });
+      saveAudioSettings({ sfx: false, music: false });
+      expect(loadAudioSettings()).toEqual({ sfx: false, music: false });
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
   it('отсутствие хранилища не приводит к исключению', () => {
-    expect(() => saveAudioSettings({ sfx: false }, null)).not.toThrow();
+    expect(() => saveAudioSettings({ sfx: false, music: false }, null)).not.toThrow();
   });
 
   it('ошибка записи (переполнение квоты) не пробрасывается наружу', () => {
@@ -583,7 +598,7 @@ describe('saveAudioSettings', () => {
       },
     };
 
-    expect(() => saveAudioSettings({ sfx: false }, full)).not.toThrow();
+    expect(() => saveAudioSettings({ sfx: false, music: false }, full)).not.toThrow();
   });
 
   it('запись звука не затирает остальные сохранения (разные ключи)', () => {
@@ -592,11 +607,11 @@ describe('saveAudioSettings', () => {
     saveStats(SAVED_STATS, store);
     saveSettings(VALID, store);
     saveAchievements(['first-win'], store);
-    saveAudioSettings({ sfx: false }, store);
+    saveAudioSettings({ sfx: false, music: false }, store);
 
     expect(loadStats(store)).toEqual(SAVED_STATS);
     expect(loadSettings(store)).toEqual(VALID);
     expect(loadAchievements(store)).toEqual(['first-win']);
-    expect(loadAudioSettings(store)).toEqual({ sfx: false });
+    expect(loadAudioSettings(store)).toEqual({ sfx: false, music: false });
   });
 });
