@@ -16,17 +16,66 @@ body {
   justify-content: center;
 }
 
-#app main {
+.screen {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   padding: 16px;
+  box-sizing: border-box;
+}
+
+.screen[hidden] {
+  display: none;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font: 700 24px/1.2 system-ui, sans-serif;
+  color: #3f382c;
+}
+
+fieldset {
+  width: min(320px, calc(100vw - 32px));
+  margin: 0;
+  padding: 8px 12px 12px;
+  border: 1px solid #c9beae;
+  border-radius: 8px;
+}
+
+legend {
+  padding: 0 6px;
+  font: 700 14px/1.2 system-ui, sans-serif;
+  color: #6b614f;
+}
+
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font: 600 16px/1.2 system-ui, sans-serif;
+  color: #3f382c;
+  cursor: pointer;
+}
+
+fieldset input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  accent-color: #4a4235;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 #game-canvas {
   display: block;
-  width: min(360px, calc(100vw - 32px), calc(100vh - 230px));
+  width: min(360px, calc(100vw - 32px), calc(100vh - 300px));
   height: auto;
   background: #f2ebe0;
   border: 1px solid #c9beae;
@@ -39,6 +88,12 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+}
+
+#series-info {
+  margin: 0;
+  font: 700 15px/1.2 system-ui, sans-serif;
+  color: #6b614f;
 }
 
 #status {
@@ -69,6 +124,20 @@ body {
   gap: 8px;
 }
 
+#result-title {
+  margin: 0;
+  font: 700 26px/1.2 system-ui, sans-serif;
+  color: #3f382c;
+  text-align: center;
+}
+
+#result-sub {
+  margin: 0;
+  font: 600 17px/1.3 system-ui, sans-serif;
+  color: #6b614f;
+  text-align: center;
+}
+
 button {
   min-height: 44px;
   padding: 10px 16px;
@@ -81,7 +150,7 @@ button {
   touch-action: manipulation;
 }
 
-button:active {
+button:active:not(:disabled) {
   background: #e0d6c5;
 }
 
@@ -90,9 +159,20 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+#menu-pvp,
+#menu-pve {
+  width: min(280px, calc(100vw - 32px));
+  font-size: 18px;
+}
+
 /* Низкий landscape (телефон): поле слева, панель справа */
 @media (orientation: landscape) and (max-height: 540px) {
-  #app main {
+  #screen-game {
     flex-direction: row;
   }
 
