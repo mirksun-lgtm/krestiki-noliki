@@ -21,9 +21,11 @@
 | 12 | Финальный UX / accessibility pass | ✅ готово | `30fc5ce` |
 | 13 | Финальный hardening | ✅ готово | `fb1e112` |
 | — | Аудит §26/§38 (предпубликационный) | ✅ готово | `79a71f0` |
-| 14 | Публикация: GitHub Pages | 🟡 в работе | — |
+| 14 | Публикация: GitHub Pages | ✅ готово | `7f8ea2b` |
 
-## Публикация GitHub Pages — подготовка (01.10.2026)
+## Публикация GitHub Pages (01.10.2026)
+
+**Живая игра: https://mirksun-lgtm.github.io/krestiki-noliki/** (репозиторий `mirksun-lgtm/krestiki-noliki`, аккаунт Олега).
 
 - Решение Олега (01.10.2026): основная площадка — GitHub Pages, опция itch.io потом; вопрос хостинга закрыт в BACKLOG.
 - `vite.config.ts` — относительный `base: './'`: сборка переносима на любую поддиректорию (project-page GitHub Pages, itch.io); в `dist/index.html` ссылки `./assets/...`.
@@ -31,9 +33,10 @@
 - `README.md` — витрина репозитория (ссылка «Играть» подставляется после публикации).
 - План: `docs/superpowers/plans/2026-10-01-github-pages.md`; ход работ — ledger в `.superpowers/sdd/2026-10-01-github-pages/` (gitignored).
 - Верификация подготовки: 250/250, `tsc + vite build` чисто (css 7.33 kB, js 25.74 kB), prod preview: меню и партия живые, консоль 0/0, все ресурсы 200.
-- Бэкап на момент подготовки: `E:\Backups\Krestiki_Noliki\` (zip исходников + git bundle со всей историей).
-- Публикация (push → включение Pages → живой URL) выполняется отдельно — итог дописывается в этот блок.
-- Коммит подготовки: `61c995f`.
+- Бэкап: `E:\Backups\Krestiki_Noliki\` (zip исходников + git bundle со всей историей — обновлён после публикации, 01.10.2026).
+- Публикация: push в GitHub → workflow (run #1 упал на deploy — Pages ещё не был включён; run #2: build зелёный с первого раза — npm ci/250 тестов/tsc+vite build на ubuntu, deploy зелёный после включения Pages Олегом и Re-run). **Нюанс настройки**: environment `github-pages` блокировал деплой из `master` («branch is not allowed due to environment protection rules») — в Settings → Environments → github-pages → Deployment branches and tags выставлено **No restrictions**; будущим чатам: если деплой вдруг снова отклонён — смотреть туда.
+- **Живая проверка (01.10.2026)**: страница и ассеты 200 (пути `./assets/...` подтверждены на project-page), консоль 0 ошибок/0 предупреждений, меню отрисовано, партия PvP сыграна (ход принят, «Ход: O»).
+- Коммит подготовки: `61c995f`; фикс ревью (Actions до node24-мажоров): `fe4f5f8`; коммит публикации (живая ссылка в README): `7f8ea2b`.
 
 ## Итоги аудита §26/§38 (01.10.2026)
 
