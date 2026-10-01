@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { loadSettings, saveSettings, SAVE_KEY, type SettingsStorage } from './storage';
+import {
+  loadSettings,
+  loadStats,
+  saveSettings,
+  saveStats,
+  SAVE_KEY,
+  STATS_KEY,
+  type SettingsStorage,
+} from './storage';
 
 /** Значения по умолчанию — выписаны вручную, не берутся из кода под тестом. */
 const FALLBACK = {
@@ -158,5 +166,176 @@ describe('saveSettings', () => {
     };
 
     expect(() => saveSettings(VALID, full)).not.toThrow();
+  });
+});
+
+/** Пустая статистика — литерал, не из кода под тестом. */
+const EMPTY_STATS = {
+  totalGames: 0,
+  wins: 0,
+  losses: 0,
+  draws: 0,
+  pvp: { xWins: 0, oWins: 0, draws: 0 },
+  pve: { wins: 0, losses: 0, draws: 0 },
+  byDifficulty: {
+    easy: { wins: 0, losses: 0, draws: 0 },
+    medium: { wins: 0, losses: 0, draws: 0 },
+    hard: { wins: 0, losses: 0, draws: 0 },
+    impossible: { wins: 0, losses: 0, draws: 0 },
+  },
+  winStreak: 0,
+  bestWinStreak: 0,
+} as const;
+
+/** Заполненная статистика — тоже ручной литерал (JSON-совместимый). */
+const SAVED_STATS = {
+  totalGames: 7,
+  wins: 4,
+  losses: 2,
+  draws: 1,
+  pvp: { xWins: 2, oWins: 1, draws: 1 },
+  pve: { wins: 2, losses: 2, draws: 0 },
+  byDifficulty: {
+    easy: { wins: 1, losses: 0, draws: 0 },
+    medium: { wins: 1, losses: 2, draws: 0 },
+    hard: { wins: 0, losses: 0, draws: 0 },
+    impossible: { wins: 0, losses: 0, draws: 0 },
+  },
+  winStreak: 2,
+  bestWinStreak: 3,
+} as const;
+
+function rawStatsSeed(payload: unknown): Record<string, string> {
+  return { [STATS_KEY]: JSON.stringify(payload) };
+}
+
+describe('loadStats', () => {
+  it('без хранилища возвращает пустую статистику', () => {
+    expect(loadStats(null)).toEqual(EMPTY_STATS);
+  });
+
+  it('пустое хранилище возвращает пустую статистику', () => {
+    expect(loadStats(memoryStorage())).toEqual(EMPTY_STATS);
+  });
+
+  it('повреждённый JSON возвращает пустую статистику', () => {
+    const store = memoryStorage({ [STATS_KEY]: '{тут не JSON' });
+
+    expect(loadStats(store)).toEqual(EMPTY_STATS);
+  });
+
+  it.each([42, null, 'привет'])(
+    'не-объект вместо сохранения (%j) возвращает пустую статистику',
+    (payload) => {
+      expect(loadStats(memoryStorage(rawStatsSeed(payload)))).toEqual(EMPTY_STATS);
+    },
+  );
+
+  it('сохранение другой версии игнорируется', () => {
+    const store = memoryStorage(rawStatsSeed({ version: 99, stats: SAVED_STATS }));
+
+    expect(loadStats(store)).toEqual(EMPTY_STATS);
+  });
+
+  it('валидная сохранённая статистика загружается без потерь', () => {
+    const store = memoryStorage(rawStatsSeed({ version: 1, stats: SAVED_STATS }));
+
+    expect(loadStats(store)).toEqual(SAVED_STATS);
+  });
+
+  it('неполное сохранение дополняется нулями по недостающим полям', () => {
+    const store = memoryStorage(rawStatsSeed({ version: 1, stats: { totalGames: 5 } }));
+
+    expect(loadStats(store)).toEqual({ ...EMPTY_STATS, totalGames: 5 });
+  });
+
+  it('невалидные значения полей заменяются нулями', () => {
+    const store = memoryStorage(
+      rawStatsSeed({
+        version: 1,
+        stats: {
+          ...SAVED_STATS,
+          wins: -3,
+          draws: 2.5,
+          winStreak: 'много',
+          pvp: { ...SAVED_STATS.pvp, xWins: null },
+        },
+      }),
+    );
+
+    const loaded = loadStats(store);
+    expect(loaded.wins).toBe(0);
+    expect(loaded.draws).toBe(0);
+    expect(loaded.winStreak).toBe(0);
+    expect(loaded.pvp.xWins).toBe(0);
+    // валидные поля не пострадали
+    expect(loaded.totalGames).toBe(7);
+    expect(loaded.pvp.oWins).toBe(1);
+  });
+
+  it('исключение при чтении хранилища не роняет загрузку', () => {
+    const broken: SettingsStorage = {
+      getItem: () => {
+        throw new Error('SecurityError');
+      },
+      setItem: () => {},
+    };
+
+    expect(loadStats(broken)).toEqual(EMPTY_STATS);
+  });
+
+  it('по умолчанию читает из localStorage браузера', () => {
+    vi.stubGlobal('localStorage', memoryStorage(rawStatsSeed({ version: 1, stats: SAVED_STATS })));
+    try {
+      expect(loadStats()).toEqual(SAVED_STATS);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('saveStats', () => {
+  it('записанная статистика читается обратно без потерь', () => {
+    const store = memoryStorage();
+
+    saveStats(SAVED_STATS, store);
+
+    expect(loadStats(store)).toEqual(SAVED_STATS);
+  });
+
+  it('по умолчанию пишет в localStorage браузера', () => {
+    const store = memoryStorage();
+    vi.stubGlobal('localStorage', store);
+    try {
+      saveStats(SAVED_STATS);
+      expect(loadStats()).toEqual(SAVED_STATS);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('отсутствие хранилища не приводит к исключению', () => {
+    expect(() => saveStats(SAVED_STATS, null)).not.toThrow();
+  });
+
+  it('ошибка записи (переполнение квоты) не пробрасывается наружу', () => {
+    const full: SettingsStorage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+    };
+
+    expect(() => saveStats(SAVED_STATS, full)).not.toThrow();
+  });
+
+  it('запись настроек не затирает статистику (разные ключи)', () => {
+    const store = memoryStorage();
+
+    saveStats(SAVED_STATS, store);
+    saveSettings(VALID, store);
+
+    expect(loadStats(store)).toEqual(SAVED_STATS);
+    expect(loadSettings(store)).toEqual(VALID);
   });
 });

@@ -2,6 +2,7 @@ import type { Player } from '../game/gameCore';
 import type { SeriesFormat } from '../game/series';
 import type { TimerPreset } from '../game/turnTimer';
 import type { Difficulty } from '../ai/ai';
+import { createStats, type Stats } from '../game/stats';
 
 /** Последние подтверждённые игроком настройки партии. */
 export interface UserSettings {
@@ -111,6 +112,90 @@ export function saveSettings(
   };
   try {
     storage.setItem(SAVE_KEY, JSON.stringify(payload));
+  } catch {
+    // переполнилась квота или хранилище недоступно — сохранение просто не происходит
+  }
+}
+
+export const STATS_KEY = 'krestiki-noliki:stats';
+
+/** Счётчик — неотрицательное целое; всё остальное при чтении и записи → 0. */
+function count(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeSide(value: unknown): { wins: number; losses: number; draws: number } {
+  const source = asObject(value);
+  return { wins: count(source.wins), losses: count(source.losses), draws: count(source.draws) };
+}
+
+/** Своевольная нормализация: каждый счётчик отдельно, невалидное → 0. */
+function normalizeStats(raw: unknown): Stats {
+  const source = asObject(raw);
+  const pvp = asObject(source.pvp);
+  const byDifficulty = asObject(source.byDifficulty);
+  return {
+    totalGames: count(source.totalGames),
+    wins: count(source.wins),
+    losses: count(source.losses),
+    draws: count(source.draws),
+    pvp: { xWins: count(pvp.xWins), oWins: count(pvp.oWins), draws: count(pvp.draws) },
+    pve: normalizeSide(source.pve),
+    byDifficulty: {
+      easy: normalizeSide(byDifficulty.easy),
+      medium: normalizeSide(byDifficulty.medium),
+      hard: normalizeSide(byDifficulty.hard),
+      impossible: normalizeSide(byDifficulty.impossible),
+    },
+    winStreak: count(source.winStreak),
+    bestWinStreak: count(source.bestWinStreak),
+  };
+}
+
+/**
+ * Чтение статистики. Любая недоступность или повреждение данных
+ * (нет хранилища, битый JSON, чужая версия, невалидные поля) → пустая статистика.
+ */
+export function loadStats(storage: SettingsStorage | null = browserStorage()): Stats {
+  if (storage == null) return createStats();
+
+  let raw: string | null;
+  try {
+    raw = storage.getItem(STATS_KEY);
+  } catch {
+    return createStats();
+  }
+  if (raw == null) return createStats();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return createStats();
+  }
+  if (typeof parsed !== 'object' || parsed === null) return createStats();
+
+  const save = parsed as { version?: unknown; stats?: unknown };
+  if (save.version !== SAVE_VERSION) return createStats();
+  return normalizeStats(save.stats);
+}
+
+/**
+ * Запись статистики. Отсутствующее или неработающее хранилище —
+ * игра продолжает идти без сохранения, исключение наружу не выходит.
+ */
+export function saveStats(
+  stats: Stats,
+  storage: SettingsStorage | null = browserStorage(),
+): void {
+  if (storage == null) return;
+  try {
+    const payload = { version: SAVE_VERSION, stats: normalizeStats(stats) };
+    storage.setItem(STATS_KEY, JSON.stringify(payload));
   } catch {
     // переполнилась квота или хранилище недоступно — сохранение просто не происходит
   }

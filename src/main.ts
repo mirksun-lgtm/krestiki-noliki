@@ -10,7 +10,14 @@ import {
 } from './game/turnTimer';
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
 import { chooseMove } from './ai/ai';
-import { loadSettings, saveSettings, type UserSettings } from './persistence/storage';
+import { recordGame, type Stats } from './game/stats';
+import {
+  loadSettings,
+  loadStats,
+  saveSettings,
+  saveStats,
+  type UserSettings,
+} from './persistence/storage';
 
 function must<T>(value: T | null | undefined, message: string): T {
   if (value == null) throw new Error(message);
@@ -26,6 +33,9 @@ function element<T extends HTMLElement>(id: string): T {
 const screens = Array.from(document.querySelectorAll<HTMLElement>('.screen'));
 const menuPvpBtn = element<HTMLButtonElement>('menu-pvp');
 const menuPveBtn = element<HTMLButtonElement>('menu-pve');
+const menuStatsBtn = element<HTMLButtonElement>('menu-stats');
+const statsBackBtn = element<HTMLButtonElement>('stats-back');
+const statsBodyEl = element<HTMLElement>('stats-body');
 const aiDifficultyFieldset = element<HTMLFieldSetElement>('ai-difficulty');
 const pveSideFieldset = element<HTMLFieldSetElement>('pve-side');
 const setupBackBtn = element<HTMLButtonElement>('setup-back');
@@ -45,7 +55,7 @@ const resultOverlay = element<HTMLElement>('result-overlay');
 const canvas = element<HTMLCanvasElement>('game-canvas');
 const ctx = must(canvas.getContext('2d'), '2D-контекст недоступен');
 
-type ScreenId = 'screen-menu' | 'screen-setup' | 'screen-game';
+type ScreenId = 'screen-menu' | 'screen-setup' | 'screen-stats' | 'screen-game';
 
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   finished: 'Партия уже окончена — начните новую',
@@ -58,6 +68,7 @@ type Params = { mode: 'pvp' | 'pve' } & UserSettings;
 /** Сохранённые настройки живут дольше перезагрузки; сама партия — нет (GDD §21). */
 const savedSettings = loadSettings();
 let params: Params = { mode: 'pvp', ...savedSettings };
+let stats: Stats = loadStats();
 let series: SeriesState = createSeries('single', 'X');
 let state: GameState = createGame('X');
 let hoverCell: number | null = null;
@@ -273,7 +284,38 @@ function showResult(): void {
 function finishGameIfNeeded(): void {
   if (state.status === 'playing') return;
   series = recordGameResult(series, state.winner);
+  stats = recordGame(stats, {
+    mode: params.mode,
+    winner: state.winner,
+    side: params.side,
+    difficulty: params.difficulty,
+  });
+  saveStats(stats);
   showResult();
+}
+
+/** Заполнение экрана статистики: значения — только числа из проверенного Stats. */
+function renderStats(): void {
+  const rows = (['easy', 'medium', 'hard', 'impossible'] as const)
+    .map((level) => {
+      const s = stats.byDifficulty[level];
+      const name = level[0].toUpperCase() + level.slice(1);
+      return `<tr><th>${name}</th><td>${s.wins}</td><td>${s.losses}</td><td>${s.draws}</td></tr>`;
+    })
+    .join('');
+  statsBodyEl.innerHTML = `
+    <p class="stat-line">Всего партий: <b>${stats.totalGames}</b></p>
+    <p class="stat-line">Победы: <b>${stats.wins}</b> · Поражения: <b>${stats.losses}</b> · Ничьи: <b>${stats.draws}</b></p>
+    <p class="stat-line">Серия побед: текущая <b>${stats.winStreak}</b> · лучшая <b>${stats.bestWinStreak}</b></p>
+    <h3>PvP</h3>
+    <p class="stat-line">X: <b>${stats.pvp.xWins}</b> · O: <b>${stats.pvp.oWins}</b> · Ничьих: <b>${stats.pvp.draws}</b></p>
+    <h3>PvE (против AI)</h3>
+    <p class="stat-line">Победы: <b>${stats.pve.wins}</b> · Поражения: <b>${stats.pve.losses}</b> · Ничьи: <b>${stats.pve.draws}</b></p>
+    <table class="stat-table">
+      <thead><tr><th>Сложность</th><th>Победы</th><th>Поражения</th><th>Ничьи</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
 }
 
 function cellFromEvent(e: PointerEvent): number | null {
@@ -353,6 +395,13 @@ menuPveBtn.addEventListener('click', () => {
 });
 
 setupBackBtn.addEventListener('click', () => showScreen('screen-menu'));
+
+menuStatsBtn.addEventListener('click', () => {
+  renderStats();
+  showScreen('screen-stats');
+});
+
+statsBackBtn.addEventListener('click', () => showScreen('screen-menu'));
 
 setupStartBtn.addEventListener('click', () => {
   const format = must(
