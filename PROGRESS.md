@@ -21,6 +21,18 @@
 | 12 | Финальный UX / accessibility pass | ✅ готово | `30fc5ce` |
 | 13 | Финальный hardening | ✅ готово | `fb1e112` |
 | — | Аудит §26/§38 (предпубликационный) | ✅ готово | `79a71f0` |
+| 14 | Публикация: GitHub Pages | 🟡 в работе | — |
+
+## Публикация GitHub Pages — подготовка (01.10.2026)
+
+- Решение Олега (01.10.2026): основная площадка — GitHub Pages, опция itch.io потом; вопрос хостинга закрыт в BACKLOG.
+- `vite.config.ts` — относительный `base: './'`: сборка переносима на любую поддиректорию (project-page GitHub Pages, itch.io); в `dist/index.html` ссылки `./assets/...`.
+- `.github/workflows/deploy.yml` — push в `master` → `npm ci` → 250 тестов → `tsc --noEmit && vite build` → деплой на GitHub Pages (официальные actions: configure-pages, upload-pages-artifact, deploy-pages); ручной запуск — `workflow_dispatch`. Требует Source = GitHub Actions в Settings → Pages.
+- `README.md` — витрина репозитория (ссылка «Играть» подставляется после публикации).
+- План: `docs/superpowers/plans/2026-10-01-github-pages.md`; ход работ — ledger в `.superpowers/sdd/2026-10-01-github-pages/` (gitignored).
+- Верификация подготовки: 250/250, `tsc + vite build` чисто (css 7.33 kB, js 25.74 kB), prod preview: меню и партия живые, консоль 0/0, все ресурсы 200.
+- Бэкап на момент подготовки: `E:\Backups\Krestiki_Noliki\` (zip исходников + git bundle со всей историей).
+- Публикация (push → включение Pages → живой URL) выполняется отдельно — итог дописывается в этот блок.
 
 ## Итоги аудита §26/§38 (01.10.2026)
 
