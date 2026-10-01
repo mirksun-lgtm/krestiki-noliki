@@ -19,6 +19,7 @@ const screens = Array.from(document.querySelectorAll<HTMLElement>('.screen'));
 const menuPvpBtn = element<HTMLButtonElement>('menu-pvp');
 const menuPveBtn = element<HTMLButtonElement>('menu-pve');
 const aiDifficultyFieldset = element<HTMLFieldSetElement>('ai-difficulty');
+const pveSideFieldset = element<HTMLFieldSetElement>('pve-side');
 const setupBackBtn = element<HTMLButtonElement>('setup-back');
 const setupStartBtn = element<HTMLButtonElement>('setup-start');
 const seriesInfoEl = element<HTMLElement>('series-info');
@@ -42,12 +43,16 @@ const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   occupied: 'Клетка занята',
 };
 
-/** Человек в PvE всегда играет за X, AI — за O. */
-const HUMAN_PLAYER: Player = 'X';
-const AI_PLAYER: Player = 'O';
-
-let params: { mode: 'pvp' | 'pve'; difficulty: Difficulty; format: SeriesFormat; starter: Player } = {
+let params: {
+  mode: 'pvp' | 'pve';
+  /** Сторона игрока в PvE; в PvP поле не используется. */
+  side: Player;
+  difficulty: Difficulty;
+  format: SeriesFormat;
+  starter: Player;
+} = {
   mode: 'pvp',
+  side: 'X',
   difficulty: 'medium',
   format: 'single',
   starter: 'X',
@@ -58,8 +63,12 @@ let hoverCell: number | null = null;
 /** Сторона поля в CSS-пикселях, обновляется при resize. */
 let boardSize = 360;
 
+function aiSide(): Player {
+  return params.side === 'X' ? 'O' : 'X';
+}
+
 function isAiTurn(): boolean {
-  return params.mode === 'pve' && state.status === 'playing' && state.currentPlayer === AI_PLAYER;
+  return params.mode === 'pve' && state.status === 'playing' && state.currentPlayer === aiSide();
 }
 
 function scheduleAiMove(): void {
@@ -110,13 +119,13 @@ function updateStatus(): void {
   if (state.status === 'playing') {
     if (isAiTurn()) {
       statusEl.textContent = 'Ход AI…';
-      statusEl.dataset.player = AI_PLAYER;
+      statusEl.dataset.player = aiSide();
     } else {
       statusEl.textContent = `Ход: ${state.currentPlayer}`;
       statusEl.dataset.player = state.currentPlayer;
     }
   } else if (state.status === 'win') {
-    statusEl.textContent = params.mode === 'pve' && state.winner === AI_PLAYER
+    statusEl.textContent = params.mode === 'pve' && state.winner === aiSide()
       ? 'Победа AI!'
       : `Победа: ${state.winner}!`;
     statusEl.dataset.player = state.winner ?? '';
@@ -136,7 +145,10 @@ function gameNumberLabel(): string {
 /** Счёт для подписей: в PvE стороны — это Вы и AI. */
 function scoreLabel(): string {
   const { X, O } = series.score;
-  return params.mode === 'pve' ? `Вы ${X} — ${O} AI` : `X ${X} — ${O} O`;
+  if (params.mode !== 'pve') return `X ${X} — ${O} O`;
+  const mine = params.side === 'X' ? X : O;
+  const theirs = params.side === 'X' ? O : X;
+  return `Вы ${mine} — ${theirs} AI`;
 }
 
 function updateSeriesInfo(): void {
@@ -162,7 +174,7 @@ function showResult(): void {
   if (state.status === 'win') {
     resultTitleEl.textContent =
       params.mode === 'pve'
-        ? state.winner === HUMAN_PLAYER
+        ? state.winner === params.side
           ? 'Победа!'
           : 'Победа AI!'
         : `Победа ${state.winner}!`;
@@ -245,12 +257,14 @@ window.addEventListener('resize', syncCanvasSize);
 menuPvpBtn.addEventListener('click', () => {
   params.mode = 'pvp';
   aiDifficultyFieldset.hidden = true;
+  pveSideFieldset.hidden = true;
   showScreen('screen-setup');
 });
 
 menuPveBtn.addEventListener('click', () => {
   params.mode = 'pve';
   aiDifficultyFieldset.hidden = false;
+  pveSideFieldset.hidden = false;
   showScreen('screen-setup');
 });
 
@@ -269,9 +283,14 @@ setupStartBtn.addEventListener('click', () => {
     document.querySelector<HTMLInputElement>('input[name="difficulty"]:checked'),
     'Сложность не выбрана',
   ).value;
+  const side = must(
+    document.querySelector<HTMLInputElement>('input[name="side"]:checked'),
+    'Сторона игрока не выбрана',
+  ).value;
 
   params = {
     mode: params.mode,
+    side: side === 'O' ? 'O' : 'X',
     difficulty: difficulty === 'easy' || difficulty === 'hard' || difficulty === 'impossible'
       ? difficulty
       : 'medium',
