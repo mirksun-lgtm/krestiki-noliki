@@ -1,16 +1,16 @@
 import './style.css';
 import { createGame, makeMove, timeoutGame, type GameState, type Player } from './game/gameCore';
-import { createSeries, recordGameResult, targetWins, type SeriesFormat, type SeriesState } from './game/series';
+import { createSeries, recordGameResult, targetWins, type SeriesState } from './game/series';
 import {
   advanceTimer,
   createTurnTimer,
   restartTimer,
   stopTimer,
-  type TimerPreset,
   type TurnTimer,
 } from './game/turnTimer';
 import { cellAtPoint, drawBoard } from './rendering/boardRenderer';
-import { chooseMove, type Difficulty } from './ai/ai';
+import { chooseMove } from './ai/ai';
+import { loadSettings, saveSettings, type UserSettings } from './persistence/storage';
 
 function must<T>(value: T | null | undefined, message: string): T {
   if (value == null) throw new Error(message);
@@ -53,22 +53,11 @@ const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   occupied: 'Клетка занята',
 };
 
-let params: {
-  mode: 'pvp' | 'pve';
-  /** Сторона игрока в PvE; в PvP поле не используется. */
-  side: Player;
-  difficulty: Difficulty;
-  format: SeriesFormat;
-  starter: Player;
-  timer: TimerPreset;
-} = {
-  mode: 'pvp',
-  side: 'X',
-  difficulty: 'medium',
-  format: 'single',
-  starter: 'X',
-  timer: 0,
-};
+type Params = { mode: 'pvp' | 'pve' } & UserSettings;
+
+/** Сохранённые настройки живут дольше перезагрузки; сама партия — нет (GDD §21). */
+const savedSettings = loadSettings();
+let params: Params = { mode: 'pvp', ...savedSettings };
 let series: SeriesState = createSeries('single', 'X');
 let state: GameState = createGame('X');
 let hoverCell: number | null = null;
@@ -335,6 +324,20 @@ canvas.addEventListener('pointerleave', () => {
 
 window.addEventListener('resize', syncCanvasSize);
 
+function setRadio(name: string, value: string): void {
+  const input = document.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`);
+  if (input != null) input.checked = true;
+}
+
+/** Восстановление сохранённых настроек в форме параметров при запуске. */
+function applySettingsToForm(settings: UserSettings): void {
+  setRadio('side', settings.side);
+  setRadio('difficulty', settings.difficulty);
+  setRadio('format', settings.format);
+  setRadio('starter', settings.starter);
+  setRadio('timer', String(settings.timer));
+}
+
 menuPvpBtn.addEventListener('click', () => {
   params.mode = 'pvp';
   aiDifficultyFieldset.hidden = true;
@@ -384,6 +387,7 @@ setupStartBtn.addEventListener('click', () => {
     timer: timerValue === '5' ? 5 : timerValue === '10' ? 10 : timerValue === '30' ? 30 : 0,
   };
   series = createSeries(params.format, params.starter);
+  saveSettings(params);
   startGame();
 });
 
@@ -412,4 +416,5 @@ resultNextBtn.addEventListener('click', () => {
   startGame();
 });
 
+applySettingsToForm(savedSettings);
 showScreen('screen-menu');
