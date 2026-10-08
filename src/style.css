@@ -78,6 +78,7 @@ h2 {
 }
 
 fieldset {
+  box-sizing: border-box;
   width: min(320px, calc(100vw - 32px));
   margin: 0;
   padding: 8px 12px 12px;
