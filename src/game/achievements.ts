@@ -58,12 +58,12 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     check: (ctx) => ctx.stats.byDifficulty.hard.wins >= 1,
   },
   {
-    id: 'beat-impossible',
-    title: 'Невозможно? Возможно!',
-    description: 'Победите AI уровня Impossible',
-    icon: '👑',
+    id: 'draw-impossible',
+    title: 'Непробиваемый',
+    description: 'Сыграйте вничью с AI уровня Impossible',
+    icon: '🛡️',
     score: 30,
-    check: (ctx) => ctx.stats.byDifficulty.impossible.wins >= 1,
+    check: (ctx) => ctx.stats.byDifficulty.impossible.draws >= 1,
   },
   {
     id: 'fast-win',

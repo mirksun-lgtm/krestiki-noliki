@@ -44,7 +44,7 @@ describe('ACHIEVEMENTS', () => {
       'first-win',
       'streak-3',
       'beat-hard',
-      'beat-impossible',
+      'draw-impossible',
       'fast-win',
       'timer-win',
       'three-draws',
@@ -86,16 +86,28 @@ describe('условия выдачи', () => {
     const stats = statsPlaying([result({ mode: 'pve', difficulty: 'hard' })]);
 
     expect(newlyUnlocked([], ctx({ stats }))).toContain('beat-hard');
-    expect(newlyUnlocked([], ctx({ stats }))).not.toContain('beat-impossible');
+    expect(newlyUnlocked([], ctx({ stats }))).not.toContain('draw-impossible');
   });
 
-  it('победа над Impossible разблокирует beat-impossible', () => {
+  it('ничьей с Impossible разблокирует draw-impossible', () => {
     const stats = statsPlaying([
-      result({ mode: 'pve', difficulty: 'impossible' }),
+      result({ mode: 'pve', winner: null, difficulty: 'impossible' }),
       result({ mode: 'pve', difficulty: 'hard' }),
     ]);
 
-    expect(newlyUnlocked([], ctx({ stats }))).toContain('beat-impossible');
+    expect(newlyUnlocked([], ctx({ stats }))).toContain('draw-impossible');
+  });
+
+  it('победа над Impossible не разблокирует draw-impossible — нужна ничья', () => {
+    const stats = statsPlaying([result({ mode: 'pve', difficulty: 'impossible' })]);
+
+    expect(newlyUnlocked([], ctx({ stats }))).not.toContain('draw-impossible');
+  });
+
+  it('ничьей с другим уровнем draw-impossible не выдаётся', () => {
+    const stats = statsPlaying([result({ mode: 'pve', winner: null, difficulty: 'hard' })]);
+
+    expect(newlyUnlocked([], ctx({ stats }))).not.toContain('draw-impossible');
   });
 
   it('три ничьи разблокируют three-draws, две — ещё нет', () => {
@@ -185,7 +197,11 @@ describe('achievementScore', () => {
   it('стоимость конкретных достижений соответствует зафиксированной в GDD', () => {
     expect(achievementScore(['first-win'])).toBe(10);
     expect(achievementScore(['streak-3'])).toBe(20);
-    expect(achievementScore(['beat-impossible'])).toBe(30);
+    expect(achievementScore(['draw-impossible'])).toBe(30);
+  });
+
+  it('старый id beat-impossible (этап v1) не даёт очков', () => {
+    expect(achievementScore(['beat-impossible'])).toBe(0);
   });
 
   it('сумма всех достижений — полный Score набора (125)', () => {
