@@ -100,7 +100,7 @@ type ScreenId =
 const LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#a5885e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>';
 
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
-  finished: 'Партия уже окончена — начните новую',
+  finished: 'Партия уже окончена — нажмите «Заново»',
   outOfRange: 'Ход вне поля',
   occupied: 'Клетка занята',
 };
@@ -369,7 +369,7 @@ function updateStatus(): void {
   } else if (state.status === 'win') {
     statusEl.textContent = params.mode === 'pve' && state.winner === aiSide()
       ? 'Победа AI!'
-      : `Победа: ${state.winner}!`;
+      : `Победа ${state.winner}!`;
     statusEl.dataset.player = state.winner ?? '';
   } else {
     statusEl.textContent = 'Ничья';
