@@ -35,6 +35,7 @@ describe('ACHIEVEMENTS', () => {
       expect(a.title.length).toBeGreaterThan(0);
       expect(a.description.length).toBeGreaterThan(0);
       expect(a.icon.length).toBeGreaterThan(0);
+      expect(a.icon.startsWith('<svg')).toBe(true);
       expect(a.score).toBeGreaterThan(0);
     }
   });

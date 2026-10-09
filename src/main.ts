@@ -96,6 +96,9 @@ type ScreenId =
   | 'screen-settings'
   | 'screen-game';
 
+/** Замок для неполученных достижений (вместо 🔒). */
+const LOCK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#a5885e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>';
+
 const HINTS: Record<'finished' | 'outOfRange' | 'occupied', string> = {
   finished: 'Партия уже окончена — начните новую',
   outOfRange: 'Ход вне поля',
@@ -191,7 +194,7 @@ function showNextAchievement(): void {
     return;
   }
   achievementOverlay.hidden = true;
-  achievementIconEl.textContent = next.icon;
+  achievementIconEl.innerHTML = next.icon;
   achievementTitleEl.textContent = next.title;
   achievementDescEl.textContent = next.description;
   achievementGainEl.textContent = `+${next.score} очков · всего ${achievementScore(unlocked)}`;
@@ -532,7 +535,7 @@ function renderAchievements(): void {
   const items = ACHIEVEMENTS.map((a) => {
     const got = owned.has(a.id);
     return `<li class="achv-item${got ? ' unlocked' : ''}">
-      <span class="achv-icon" aria-hidden="true">${got ? a.icon : '🔒'}</span>
+      <span class="achv-icon" aria-hidden="true">${got ? a.icon : LOCK_ICON}</span>
       <span class="achv-text"><b>${a.title}</b><br /><span>${a.description}</span></span>
       <span class="achv-score">+${a.score}</span>
     </li>`;

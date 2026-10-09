@@ -382,9 +382,9 @@ button:focus-visible {
   color: #a8781f;
 }
 
-#achievement-icon {
-  font-size: 52px;
-  line-height: 1;
+#achievement-icon svg {
+  width: 52px;
+  height: 52px;
 }
 
 #achievement-title {
@@ -445,8 +445,13 @@ button:focus-visible {
 }
 
 .achv-icon {
-  font-size: 24px;
   line-height: 1;
+}
+
+.achv-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 .achv-text {

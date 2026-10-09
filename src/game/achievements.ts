@@ -21,7 +21,7 @@ export interface AchievementDef {
   id: string;
   title: string;
   description: string;
-  /** Иконка-эмодзи: этап 9/10 может заменить на SVG-арт без изменения id. */
+  /** SVG-значок 24×24 (этап v1.0.1 заменил эмодзи); id и условия не зависят от иконки. */
   icon: string;
   /** Сколько Achievement Score даёт достижение (GDD §19.3). */
   score: number;
@@ -37,7 +37,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'first-win',
     title: 'Первая победа',
     description: 'Выиграйте любую партию',
-    icon: '🏆',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#c98a3f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M17 5h2.5a2 2 0 0 1 0 4H17"/><path d="M7 5H4.5a2 2 0 0 0 0 4H7"/><path d="M12 13v3"/><path d="M9 19h6"/></svg>', // first-win: кубок
     score: 10,
     check: (ctx) => ctx.stats.wins >= 1,
   },
@@ -45,7 +45,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'streak-3',
     title: 'Хет-трик',
     description: '3 победы подряд против AI',
-    icon: '🔥',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#b8622e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a6 6 0 0 0 6-6c0-5-5-7-6-12-1 5-6 7-6 12a6 6 0 0 0 6 6Z"/><path d="M12 21a2.6 2.6 0 0 0 2.6-2.6c0-2.2-2.2-3-2.6-5.4-.4 2.4-2.6 3.2-2.6 5.4A2.6 2.6 0 0 0 12 21Z"/></svg>', // streak-3: пламя
     score: 20,
     check: (ctx) => ctx.stats.bestWinStreak >= 3,
   },
@@ -53,7 +53,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'beat-hard',
     title: 'Тактическое превосходство',
     description: 'Победите AI уровня Hard',
-    icon: '⚔️',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#3f6590" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l9 10"/><path d="M18 3L9 13"/><path d="M4 5L8 1"/><path d="M16 1l4 4"/></svg>', // beat-hard: скрещённые мечи
     score: 15,
     check: (ctx) => ctx.stats.byDifficulty.hard.wins >= 1,
   },
@@ -61,7 +61,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'draw-impossible',
     title: 'Непробиваемый',
     description: 'Сыграйте вничью с AI уровня Impossible',
-    icon: '🛡️',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.4v5.1c0 4.6-3 8.2-7 10.5-4-2.3-7-5.9-7-10.5V5.4L12 3Z" stroke="#3f6590"/><path d="M9 10.5h6" stroke="#b8622e"/><path d="M9 13.5h6" stroke="#b8622e"/></svg>', // draw-impossible: щит с «=»
     score: 30,
     check: (ctx) => ctx.stats.byDifficulty.impossible.draws >= 1,
   },
@@ -69,7 +69,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'fast-win',
     title: 'Молниеносная победа',
     description: 'Выиграйте партию, когда на поле не больше 6 фигур',
-    icon: '⚡',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#d98324" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L5 13.5h5.5L9 22l8-11.5h-5.5L13 2Z"/></svg>', // fast-win: молния
     score: 15,
     check: (ctx) => ctx.lastGame.playerWon && ctx.lastGame.moves <= 6,
   },
@@ -77,7 +77,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'timer-win',
     title: 'На счётчике',
     description: 'Выиграйте партию с включённым таймером',
-    icon: '⏱️',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#b8622e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10"/><path d="M7 21h10"/><path d="M7 3l5 9 5-9"/><path d="M7 21l5-9 5 9"/></svg>', // timer-win: песочные часы
     score: 15,
     check: (ctx) => ctx.lastGame.playerWon && ctx.lastGame.timerEnabled,
   },
@@ -85,7 +85,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'three-draws',
     title: 'Дипломат',
     description: 'Сыграйте 3 ничьи',
-    icon: '🤝',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#a5885e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c4 0 8.5-3.5 11-10"/><ellipse cx="8.6" cy="15.6" rx="2.4" ry="1.3" transform="rotate(-42 8.6 15.6)"/><ellipse cx="12" cy="12" rx="2.4" ry="1.3" transform="rotate(-42 12 12)"/><ellipse cx="15" cy="8.4" rx="2.4" ry="1.3" transform="rotate(-42 15 8.4)"/></svg>', // three-draws: оливковая ветвь
     score: 10,
     check: (ctx) => ctx.stats.draws >= 3,
   },
@@ -93,7 +93,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     id: 'ten-games',
     title: 'Разогрелись',
     description: 'Сыграйте 10 партий',
-    icon: '🎯',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="8" stroke="#3f6590"/><circle cx="12" cy="12" r="4.2" stroke="#b8622e"/><circle cx="12" cy="12" r="1.4" fill="#c98a3f" stroke="none"/></svg>', // ten-games: мишень
     score: 10,
     check: (ctx) => ctx.stats.totalGames >= 10,
   },
