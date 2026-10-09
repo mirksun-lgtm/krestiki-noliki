@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, makeMove, type GameState, type Player } from '../game/gameCore';
-import { chooseMove, type Difficulty } from './ai';
+import { chooseMove, mistakePool, type Difficulty } from './ai';
 
 /** Позиция из строки вида "OO.X...X." — точка = пустая клетка. */
 function pos(cells: string, currentPlayer: Player): GameState {
@@ -186,4 +186,52 @@ describe('уровни между собой', () => {
 
     expect(hardWins).toBeGreaterThan(easyWins);
   }, 60_000);
+});
+
+describe('mistakePool — пул ходов для ошибки уровня', () => {
+  // синтетические оценки: лучший ход — клетка 2 (score 2), остальные неточные
+  const SCORED = [
+    { cell: 0, score: -5 },
+    { cell: 1, score: -1 },
+    { cell: 2, score: 2 },
+    { cell: 3, score: -5 },
+    { cell: 4, score: -3 },
+  ];
+  const BEST = 2;
+
+  it('hard возвращает только сильнейших из неточных (максимальная оценка среди них)', () => {
+    expect(mistakePool(SCORED, BEST, 'hard')).toEqual([{ cell: 1, score: -1 }]);
+  });
+
+  it('easy и medium не сужаются — все неточные ходы в исходном порядке', () => {
+    const others = SCORED.filter((s) => s.score !== BEST);
+    expect(mistakePool(SCORED, BEST, 'easy')).toEqual(others);
+    expect(mistakePool(SCORED, BEST, 'medium')).toEqual(others);
+  });
+
+  it('неточные равны между собой — hard возвращает их все', () => {
+    const flat = [
+      { cell: 0, score: 1 },
+      { cell: 1, score: 0 },
+      { cell: 2, score: 0 },
+    ];
+    expect(mistakePool(flat, 1, 'hard')).toEqual([
+      { cell: 1, score: 0 },
+      { cell: 2, score: 0 },
+    ]);
+  });
+
+  it('неточных ходов нет — пул пуст (ошибки не будет)', () => {
+    expect(mistakePool([{ cell: 0, score: 1 }], 1, 'hard')).toEqual([]);
+  });
+});
+
+it('хард при ошибке выбирает валидную неточную клетку, а не лучшую', () => {
+  const state = pos(NEUTRAL_POSITION, 'O');
+  const cell = chooseMove(state, 'hard', () => 0); // 0 < mistakeChance — ошибка гарантирована
+  const optimal = chooseMove(state, 'impossible');
+
+  expect(cell).not.toBeNull();
+  expect(cell).not.toBe(optimal);
+  expect(state.board[cell as number]).toBeNull();
 });

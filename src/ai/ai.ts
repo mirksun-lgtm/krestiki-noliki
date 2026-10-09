@@ -56,6 +56,22 @@ function pickCell(random: () => number, items: { cell: number }[]): number {
 }
 
 /**
+ * Пул ходов для «ошибки» уровня: hard берёт только сильнейший из неточных ходов
+ * (случайный среди равных), остальные уровни — случайный среди всех неточных.
+ */
+export function mistakePool(
+  scored: readonly { cell: number; score: number }[],
+  bestScore: number,
+  difficulty: Difficulty,
+): { cell: number; score: number }[] {
+  const others = scored.filter((s) => s.score !== bestScore);
+  if (difficulty !== 'hard') return others;
+  let max = -Infinity;
+  for (const s of others) if (s.score > max) max = s.score;
+  return others.filter((s) => s.score === max);
+}
+
+/**
  * Лучший ход для `state.currentPlayer` с учётом уровня сложности.
  * `random` позволяет подделать генератор в тестах.
  */
@@ -91,8 +107,8 @@ export function chooseMove(
     (hasImmediateWin(state, ai) || hasImmediateWin(state, opponent));
 
   if (!protectNow && random() < level.mistakeChance) {
-    const others = scored.filter((s) => s.score !== bestScore);
-    if (others.length > 0) return pickCell(random, others);
+    const pool = mistakePool(scored, bestScore, difficulty);
+    if (pool.length > 0) return pickCell(random, pool);
   }
   return pickCell(random, best);
 }
