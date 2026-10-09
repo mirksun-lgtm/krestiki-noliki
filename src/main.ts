@@ -276,12 +276,26 @@ function onTimerTimeout(): void {
   syncTimerWithTurn();
 }
 
+/**
+ * Системная настройка «уменьшить движение». Читается на каждый старт анимации:
+ * предпочтение можно менять на лету, пока игра открыта.
+ */
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 function beginMarkAnim(cell: number): void {
+  if (prefersReducedMotion()) return; // знак рисуется сразу целиком
   markAnim = { cell, start: performance.now() };
   runAnim();
 }
 
 function beginWinAnim(): void {
+  if (prefersReducedMotion()) return; // линия рисуется сразу целиком
   winAnim = { start: performance.now() };
   runAnim();
 }
