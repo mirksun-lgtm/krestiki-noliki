@@ -23,7 +23,7 @@ TypeScript 7 · Vite 8 · Vitest 5 · HTML Canvas · Web Audio API. Ноль run
 ```bash
 npm install
 npm run dev      # dev-сервер
-npm test         # 250 unit-тестов
+npm test         # 265 unit-тестов
 npm run build    # tsc + production-сборка в dist/
 npm run preview  # предпросмотр сборки
 ```
