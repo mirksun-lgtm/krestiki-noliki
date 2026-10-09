@@ -1,5 +1,8 @@
 import type { GameState } from '../game/gameCore';
 
+/** Набор знаков (косметика): Набор 1 — «от руки», Набор 2 — руны. */
+export type MarkSet = 'set-1' | 'set-2';
+
 /** Визуальные параметры одного кадра поля. */
 export interface BoardView {
   /** Сторона поля в CSS-пикселях. */
@@ -13,6 +16,8 @@ export interface BoardView {
   markAnim?: { cell: number; progress: number } | null;
   /** Прогресс отрисовки победной линии 0..1; по умолчанию 1 — целиком. */
   winProgress?: number;
+  /** Выбранный набор знаков; по умолчанию Набор 1. */
+  markSet?: MarkSet;
 }
 
 /**
@@ -79,12 +84,34 @@ export type MarkStroke =
 
 /**
  * Геометрия стилизованного знака в точке (cx, cy) поля стороной size.
- * X — два мягко изогнутых штриха (рисунок «от руки»), O — кольцо полного круга.
+ * Набор 1 — знаки «от руки» (X изогнут, O — одно кольцо); Набор 2 — руны
+ * (X прямой с засечками, O — двойное кольцо).
  */
-export function markStrokes(mark: Mark, cx: number, cy: number, size: number): MarkStroke[] {
+export function markStrokes(
+  mark: Mark,
+  cx: number,
+  cy: number,
+  size: number,
+  set: MarkSet = 'set-1',
+): MarkStroke[] {
   // half-cell * 0.52: знак занимает ~52% клетки и не касается линий сетки
   const h = (size / 3) * 0.26;
   if (mark === 'X') {
+    if (set === 'set-2') {
+      // Руна: две прямые диагонали + короткие засечки на концах.
+      const s = h * 0.3;
+      const main: MarkStroke[] = [
+        { kind: 'quadratic', x1: cx - h, y1: cy - h, cx, cy, x2: cx + h, y2: cy + h },
+        { kind: 'quadratic', x1: cx + h, y1: cy - h, cx, cy, x2: cx - h, y2: cy + h },
+      ];
+      const serifs: MarkStroke[] = [
+        { kind: 'quadratic', x1: cx - h - s, y1: cy - h + s, cx, cy, x2: cx - h + s, y2: cy - h - s },
+        { kind: 'quadratic', x1: cx + h - s, y1: cy + h + s, cx, cy, x2: cx + h + s, y2: cy + h - s },
+        { kind: 'quadratic', x1: cx + h - s, y1: cy - h - s, cx, cy, x2: cx + h + s, y2: cy - h + s },
+        { kind: 'quadratic', x1: cx - h + s, y1: cy + h + s, cx, cy, x2: cx - h - s, y2: cy + h - s },
+      ];
+      return [...main, ...serifs];
+    }
     // изгиб перпендикулярен направлению штриха; оба штриха — с одинаковым поворотом
     const q = (h * 0.16) / Math.SQRT2;
     return [
@@ -93,6 +120,13 @@ export function markStrokes(mark: Mark, cx: number, cy: number, size: number): M
     ];
   }
   const from = -Math.PI / 2;
+  if (set === 'set-2') {
+    // Двойное кольцо: наружное как в Наборе 1, внутреннее уже.
+    return [
+      { kind: 'arc', cx, cy, r: h, from, to: from + Math.PI * 2 },
+      { kind: 'arc', cx, cy, r: h * 0.62, from, to: from + Math.PI * 2 },
+    ];
+  }
   return [{ kind: 'arc', cx, cy, r: h, from, to: from + Math.PI * 2 }];
 }
 
@@ -164,7 +198,7 @@ export function drawBoard(ctx: CanvasRenderingContext2D, state: GameState, view:
     }
     ctx.strokeStyle = mark === 'X' ? COLORS.marksX : COLORS.marksO;
     ctx.beginPath();
-    for (const stroke of markStrokes(mark, cx, cy, size)) {
+    for (const stroke of markStrokes(mark, cx, cy, size, view.markSet)) {
       if (stroke.kind === 'quadratic') {
         ctx.moveTo(stroke.x1, stroke.y1);
         ctx.quadraticCurveTo(stroke.cx, stroke.cy, stroke.x2, stroke.y2);

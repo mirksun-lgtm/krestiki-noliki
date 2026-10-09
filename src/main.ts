@@ -53,6 +53,8 @@ const menuSettingsBtn = element<HTMLButtonElement>('menu-settings');
 const settingsBackBtn = element<HTMLButtonElement>('settings-back');
 const sfxToggle = element<HTMLInputElement>('sfx-toggle');
 const musicToggle = element<HTMLInputElement>('music-toggle');
+const marksetRadios = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="markset"]'));
+const marksetHintEl = element<HTMLElement>('markset-hint');
 const achvBackBtn = element<HTMLButtonElement>('achievements-back');
 const achvBodyEl = element<HTMLElement>('achievements-body');
 const statsBackBtn = element<HTMLButtonElement>('stats-back');
@@ -331,6 +333,7 @@ function draw(): void {
         ? null
         : { cell: markAnim.cell, progress: (now - markAnim.start) / MARK_ANIM_MS },
     winProgress: winAnim === null ? undefined : (now - winAnim.start) / WIN_ANIM_MS,
+    markSet: params.markSet,
   });
 }
 
@@ -730,7 +733,21 @@ menuStatsBtn.addEventListener('click', () => {
 
 statsBackBtn.addEventListener('click', () => showScreen('screen-menu'));
 
-menuSettingsBtn.addEventListener('click', () => showScreen('screen-settings'));
+/** Состояние экрана настроек: Набор 2 закрыт до порога Achievement Score. */
+function renderSettings(): void {
+  const threshold = COSMETIC_UNLOCKS.find((c) => c.id === 'set-2')?.requiredScore ?? 50;
+  const hasSet2 = achievementScore(unlocked) >= threshold;
+  const set2Radio = document.querySelector<HTMLInputElement>('input[name="markset"][value="set-2"]');
+  if (set2Radio != null) set2Radio.disabled = !hasSet2;
+  marksetHintEl.hidden = hasSet2;
+  marksetHintEl.textContent = hasSet2 ? '' : `Набор 2 откроется при ${threshold} очках Achievement Score`;
+  setRadio('markset', params.markSet);
+}
+
+menuSettingsBtn.addEventListener('click', () => {
+  renderSettings();
+  showScreen('screen-settings');
+});
 
 settingsBackBtn.addEventListener('click', () => showScreen('screen-menu'));
 
@@ -746,6 +763,14 @@ musicToggle.addEventListener('change', () => {
   setMusicEnabled(music, audioSettings.music);
   saveAudioSettings(audioSettings);
   if (audioSettings.music) playMusic(music); // сразу играем, если находимся на игровом экране
+});
+
+marksetRadios.forEach((radio) => {
+  radio.addEventListener('change', () => {
+    if (!radio.checked) return;
+    params.markSet = radio.value === 'set-2' ? 'set-2' : 'set-1';
+    saveSettings(params);
+  });
 });
 
 setupStartBtn.addEventListener('click', () => {
@@ -779,6 +804,7 @@ setupStartBtn.addEventListener('click', () => {
     format: format === 'bestOf3' || format === 'bestOf5' ? format : 'single',
     starter: starter === 'O' ? 'O' : 'X',
     timer: timerValue === '5' ? 5 : timerValue === '10' ? 10 : timerValue === '30' ? 30 : 0,
+    markSet: params.markSet,
   };
   series = createSeries(params.format, params.starter);
   saveSettings(params);

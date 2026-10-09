@@ -178,3 +178,75 @@ describe('appearScale', () => {
     }
   });
 });
+
+describe('markStrokes — Набор 2 (set-2)', () => {
+  it('X набора 2 — две диагонали и четыре засечки (всего 6 штрихов)', () => {
+    expect(curves(markStrokes('X', 180, 180, SIZE, 'set-2'))).toHaveLength(6);
+  });
+
+  it('X набора 2 — диагонали прямые: точка управления на линии концов', () => {
+    const strokes = curves(markStrokes('X', 180, 180, SIZE, 'set-2'));
+    const sorted = [...strokes].sort(
+      (a, b) => Math.hypot(b.x2 - b.x1, b.y2 - b.y1) - Math.hypot(a.x2 - a.x1, a.y2 - a.y1),
+    );
+    const [m1, m2] = sorted; // два самых длинных штриха — основные диагонали
+    for (const m of [m1, m2]) {
+      const dx = m.x2 - m.x1;
+      const dy = m.y2 - m.y1;
+      const dist = Math.abs(dy * (m.cx - m.x1) - dx * (m.cy - m.y1)) / Math.hypot(dx, dy);
+      expect(dist).toBeCloseTo(0, 6);
+      expect((m.x1 + m.x2) / 2).toBeCloseTo(180, 6);
+      expect((m.y1 + m.y2) / 2).toBeCloseTo(180, 6);
+    }
+  });
+
+  it('X набора 2 — засечки перпендикулярны диагоналям', () => {
+    const strokes = curves(markStrokes('X', 180, 180, SIZE, 'set-2'));
+    const sorted = [...strokes].sort(
+      (a, b) => Math.hypot(b.x2 - b.x1, b.y2 - b.y1) - Math.hypot(a.x2 - a.x1, a.y2 - a.y1),
+    );
+    const mains = sorted.slice(0, 2);
+    const serifs = sorted.slice(2);
+    expect(serifs).toHaveLength(4);
+    for (const s of serifs) {
+      const sdx = s.x2 - s.x1;
+      const sdy = s.y2 - s.y1;
+      const perp = mains.some((m) => {
+        const mdx = m.x2 - m.x1;
+        const mdy = m.y2 - m.y1;
+        return Math.abs(sdx * mdx + sdy * mdy) < 1e-6;
+      });
+      expect(perp).toBe(true);
+    }
+  });
+
+  it('O набора 2 — два полных кольца одного центра, внутреннее меньше', () => {
+    const rings = arcs(markStrokes('O', 180, 180, SIZE, 'set-2'));
+    expect(rings).toHaveLength(2);
+    for (const ring of rings) {
+      expect(ring.cx).toBe(180);
+      expect(ring.cy).toBe(180);
+      expect(ring.to - ring.from).toBeCloseTo(Math.PI * 2, 6);
+    }
+    expect(rings[1].r).toBeLessThan(rings[0].r);
+  });
+
+  it('знаки набора 2 не вылезают за пределы клетки (не касаются сетки)', () => {
+    const halfCell = CELL / 2;
+    for (const mark of ['X', 'O'] as const) {
+      for (const s of markStrokes(mark, 180, 180, SIZE, 'set-2')) {
+        if (s.kind === 'quadratic') {
+          const reach = Math.max(Math.hypot(s.x1 - 180, s.y1 - 180), Math.hypot(s.x2 - 180, s.y2 - 180));
+          expect(reach).toBeLessThan(halfCell);
+        } else {
+          expect(s.r).toBeLessThan(halfCell);
+        }
+      }
+    }
+  });
+
+  it('без указания набора рисуется Набор 1 (обратная совместимость)', () => {
+    expect(markStrokes('X', 180, 180, SIZE)).toEqual(markStrokes('X', 180, 180, SIZE, 'set-1'));
+    expect(markStrokes('O', 180, 180, SIZE)).toEqual(markStrokes('O', 180, 180, SIZE, 'set-1'));
+  });
+});

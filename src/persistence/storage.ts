@@ -3,6 +3,7 @@ import type { SeriesFormat } from '../game/series';
 import type { TimerPreset } from '../game/turnTimer';
 import type { Difficulty } from '../ai/ai';
 import { ACHIEVEMENTS } from '../game/achievements';
+import type { MarkSet } from '../rendering/boardRenderer';
 import { createStats, type Stats } from '../game/stats';
 
 /** Последние подтверждённые игроком настройки партии. */
@@ -13,6 +14,8 @@ export interface UserSettings {
   format: SeriesFormat;
   starter: Player;
   timer: TimerPreset;
+  /** Выбранный набор знаков (косметика, GDD §15). */
+  markSet: MarkSet;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -21,7 +24,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   format: 'single',
   starter: 'X',
   timer: 0,
+  markSet: 'set-1',
 };
+
+const MARK_SETS = ['set-1', 'set-2'] as const;
 
 export const SAVE_KEY = 'krestiki-noliki:save';
 
@@ -60,6 +66,7 @@ function normalizeSettings(raw: unknown): UserSettings {
     format: pick(source.format, FORMATS, DEFAULT_SETTINGS.format),
     starter: pick(source.starter, SIDES, DEFAULT_SETTINGS.starter),
     timer: pick(source.timer, TIMERS, DEFAULT_SETTINGS.timer),
+    markSet: pick(source.markSet, MARK_SETS, DEFAULT_SETTINGS.markSet),
   };
 }
 
@@ -108,6 +115,7 @@ export function saveSettings(
       format: settings.format,
       starter: settings.starter,
       timer: settings.timer,
+      markSet: settings.markSet,
     },
   };
   try {

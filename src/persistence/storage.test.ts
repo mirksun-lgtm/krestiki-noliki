@@ -22,6 +22,7 @@ const FALLBACK = {
   format: 'single',
   starter: 'X',
   timer: 0,
+  markSet: 'set-1',
 } as const;
 
 /** Корректные сохранённые настройки — тоже ручной литерал (JSON-совместимый). */
@@ -31,6 +32,7 @@ const VALID = {
   format: 'bestOf5',
   starter: 'O',
   timer: 30,
+  markSet: 'set-2',
 } as const;
 
 function memoryStorage(seed: Record<string, string> = {}): SettingsStorage & {
@@ -88,6 +90,7 @@ describe('loadSettings', () => {
           format: 'bestOf5',
           starter: 'O',
           timer: 30,
+          markSet: 'set-2',
         },
       }),
     );
@@ -104,6 +107,7 @@ describe('loadSettings', () => {
       format: 'single',
       starter: 'X',
       timer: 0,
+      markSet: 'set-1',
     });
   });
 
@@ -111,11 +115,22 @@ describe('loadSettings', () => {
     const store = memoryStorage(
       rawSeed({
         version: 1,
-        settings: { side: 'Y', difficulty: 'ultra', format: 'bestOf7', starter: 5, timer: 7 },
+        settings: { side: 'Y', difficulty: 'ultra', format: 'bestOf7', starter: 5, timer: 7, markSet: 'set-5' },
       }),
     );
 
     expect(loadSettings(store)).toEqual(FALLBACK);
+  });
+
+  it('старое сохранение без поля markSet получает set-1', () => {
+    const store = memoryStorage(
+      rawSeed({
+        version: 1,
+        settings: { side: 'O', difficulty: 'hard', format: 'bestOf5', starter: 'O', timer: 30 },
+      }),
+    );
+
+    expect(loadSettings(store).markSet).toBe('set-1');
   });
 
   it('исключение при чтении хранилища не роняет загрузку', () => {

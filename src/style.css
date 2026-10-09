@@ -113,6 +113,12 @@ fieldset input[type='checkbox'] {
   accent-color: var(--accent);
 }
 
+.markset-hint {
+  margin: 4px 0 0;
+  font: 600 13px/1.3 system-ui, sans-serif;
+  color: #a8781f;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;
